@@ -5,8 +5,6 @@ import Foundation
 // swiftlint:disable file_length
 public final class NetworkService<APIErrorResponse: Decodable & Sendable>: Sendable {
 
-    typealias ClientAPIError = APIError<APIErrorResponse>
-
     public struct Config: Sendable {
         public let baseURL: URL
         public let defaultHeaders: [String: String]
@@ -199,7 +197,7 @@ private extension NetworkService {
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         } catch {
             if target.isAuthenticationRequired {
-                throw ClientAPIError(.unauthorized)
+                throw APIError<APIErrorResponse>(.unauthorized)
             }
         }
     }
@@ -221,10 +219,10 @@ private extension NetworkService {
         }
 
         if let data, let errorResponse = try? jsonDecoder.decode(APIErrorResponse.self, from: data) {
-            throw ClientAPIError(httpStatusCode, response: errorResponse)
+            throw APIError<APIErrorResponse>(httpStatusCode, response: errorResponse)
         }
 
-        throw ClientAPIError(httpStatusCode)
+        throw APIError<APIErrorResponse>(httpStatusCode)
     }
 
     func parseResponseData<T: Decodable>(_ data: Data, target: Target) throws -> T {
@@ -308,7 +306,7 @@ private extension NetworkService {
             return NetworkError.encoding(encodingError)
         case let decodingError as DecodingError:
             return NetworkError.decoding(decodingError)
-        case let apiError as ClientAPIError:
+        case let apiError as APIError<APIErrorResponse>:
             return apiError
         default:
             handleGeneralError(error, for: target)
