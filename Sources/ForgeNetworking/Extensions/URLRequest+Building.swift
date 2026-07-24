@@ -1,18 +1,32 @@
 import Foundation
 
 public extension URLRequest {
-    init(baseURL: URL, target: some Target, bodyEncoder: JSONEncoder = JSONEncoder()) throws {
-        guard let url = URL(string: target.path, relativeTo: baseURL), var components = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
+    init(baseURL: URL, target: Target, bodyEncoder: JSONEncoder = JSONEncoder()) throws {
+        guard let url = URL(string: target.path, relativeTo: baseURL),
+              var urlComponents = URLComponents(url: url, resolvingAgainstBaseURL: true) else {
             throw URLError(.badURL)
         }
+
         if !target.queryItems.isEmpty {
-            components.queryItems = target.queryItems
-            components.percentEncodedQuery = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B")
+            urlComponents.queryItems = target.queryItems
+
+            // https://stackoverflow.com/a/27724627
+            urlComponents.percentEncodedQuery = urlComponents
+                .percentEncodedQuery?
+                .replacingOccurrences(of: "+", with: "%2B")
         }
-        guard let resolvedURL = components.url else { throw URLError(.badURL) }
-        self.init(url: resolvedURL)
+
+        guard let componentsURL = urlComponents.url else {
+            throw URLError(.badURL)
+        }
+
+        self.init(url: componentsURL)
+
         httpMethod = target.method.rawValue
-        if let body = target.bodyData { httpBody = try bodyEncoder.encode(body) }
+
+        if let bodyData = target.bodyData {
+            httpBody = try bodyEncoder.encode(bodyData)
+        }
     }
 
     var cURL: String { cURLString() }

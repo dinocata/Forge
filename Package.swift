@@ -18,6 +18,10 @@ let package = Package(
         .library(
             name: "ForgeNetworking",
             targets: ["ForgeNetworking"]
+        ),
+        .library(
+            name: "ForgePersistence",
+            targets: ["ForgePersistence"]
         )
     ],
     dependencies: [
@@ -44,6 +48,15 @@ let package = Package(
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],
         ),
+        .target(
+            name: "ForgePersistence",
+            dependencies: [
+                "ForgeCore"
+            ],
+            swiftSettings: [
+                .enableUpcomingFeature("ApproachableConcurrency"),
+            ],
+        ),
         .testTarget(
             name: "ForgeCoreTests",
             dependencies: ["ForgeCore"],
@@ -54,6 +67,13 @@ let package = Package(
         .testTarget(
             name: "ForgeNetworkingTests",
             dependencies: ["ForgeNetworking"],
+            swiftSettings: [
+                .enableUpcomingFeature("ApproachableConcurrency"),
+            ],
+        ),
+        .testTarget(
+            name: "ForgePersistenceTests",
+            dependencies: ["ForgePersistence"],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ],

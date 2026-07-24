@@ -73,7 +73,7 @@ Forge
 │   ├── Optional and Equatable helpers
 │   └── ForgeLogger and LogLevel
 └── ForgeNetworking
-    ├── Target and AuthProvider protocols
+    ├── Target and TokenProvider protocols
     ├── NetworkService and APIClient
     ├── HTTP methods, status codes, and errors
     ├── Multipart upload types
@@ -94,7 +94,7 @@ struct APIErrorBody: Decodable, Sendable {
     let message: String
 }
 
-struct TokenProvider: AuthProvider {
+struct TokenProviderImpl: TokenProvider {
     func getToken() async throws -> String {
         "your-access-token"
     }
@@ -248,7 +248,7 @@ enum TodosTarget: Target {
 
 #### Authentication and logging
 
-`NetworkService` always receives an `AuthProvider`. `getToken()` is called while preparing a request. If it succeeds, the service writes the token as a `Bearer` value in the `Authorization` header. If it fails for a target whose `isAuthenticationRequired` is `true`, the service throws its typed `APIError` with `.unauthorized`.
+`NetworkService` always receives an `TokenProvider`. `getToken()` is called while preparing a request. If it succeeds, the service writes the token as a `Bearer` value in the `Authorization` header. If it fails for a target whose `isAuthenticationRequired` is `true`, the service throws its typed `APIError` with `.unauthorized`.
 
 Pass an optional `ForgeLogger` to receive start, duration, cancellation, decoding, and unexpected-error messages. With `verboseLogging` enabled in debug builds, request logs use the multi-line cURL representation; in non-debug builds they use the compact representation.
 
@@ -361,12 +361,12 @@ Forge has a one-way dependency graph:
 ForgeNetworking ──> ForgeCore ──> swift-async-algorithms
 ```
 
-`ForgeCore` exports its utilities directly. `ForgeNetworking` imports `ForgeCore` for `ForgeLogger` and the date-decoding strategy, then builds requests through `Target`, obtains credentials through `AuthProvider`, and executes them with an internally configured `URLSession`.
+`ForgeCore` exports its utilities directly. `ForgeNetworking` imports `ForgeCore` for `ForgeLogger` and the date-decoding strategy, then builds requests through `Target`, obtains credentials through `TokenProvider`, and executes them with an internally configured `URLSession`.
 
 The public extension points are deliberately protocol-based:
 
 - Implement `Target` for each endpoint family.
-- Implement `AuthProvider` for application-owned credential retrieval.
+- Implement `TokenProvider` for application-owned credential retrieval.
 - Implement `ForgeLogger` for application-owned logging.
 - Choose the `APIErrorResponse` generic argument that matches an API's error JSON.
 
@@ -401,11 +401,11 @@ do {
 
 Forge uses Swift concurrency throughout:
 
-- `NetworkService`, `APIClient`, `Target`, `AuthProvider`, `ForgeLogger`, `UploadFile`, HTTP value types, and API error types carry `Sendable` constraints or conformances where declared by the source.
+- `NetworkService`, `APIClient`, `Target`, `TokenProvider`, `ForgeLogger`, `UploadFile`, HTTP value types, and API error types carry `Sendable` constraints or conformances where declared by the source.
 - Network requests, uploads, token retrieval, retry handling, and async-sequence consumption use `async`/`await`.
 - `AsyncSequence.collect()` requires a sendable sequence and sendable elements because it delegates to concurrent reduction.
 - Stream-erasure helpers create a task to consume the source sequence and cancel it when the consumer terminates the stream.
-- Forge does not impose a global actor. Callers remain responsible for updating UI state on the appropriate actor and for making their own `AuthProvider` and `ForgeLogger` implementations safe for their internal state.
+- Forge does not impose a global actor. Callers remain responsible for updating UI state on the appropriate actor and for making their own `TokenProvider` and `ForgeLogger` implementations safe for their internal state.
 
 ## Best Practices
 

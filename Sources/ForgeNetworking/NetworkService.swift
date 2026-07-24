@@ -35,7 +35,7 @@ public final class NetworkService<APIErrorResponse: Decodable & Sendable>: Senda
     private let jsonEncoder: JSONEncoder
     private let jsonDecoder: JSONDecoder
 
-    private let authProvider: AuthProvider
+    private let tokenProvider: TokenProvider
     private let logger: ForgeLogger?
 
     public var baseURL: URL {
@@ -45,11 +45,11 @@ public final class NetworkService<APIErrorResponse: Decodable & Sendable>: Senda
     public init(
         config: Config,
         sessionConfiguration: URLSessionConfiguration = .default,
-        authProvider: AuthProvider,
+        tokenProvider: TokenProvider,
         logger: ForgeLogger? = nil
     ) {
         self.config = config
-        self.authProvider = authProvider
+        self.tokenProvider = tokenProvider
         self.logger = logger
 
         jsonEncoder = JSONEncoder()
@@ -193,7 +193,7 @@ private extension NetworkService {
 
     func applyAuthorizationHeader(for target: Target, to request: inout URLRequest) async throws {
         do {
-            let token = try await authProvider.getToken()
+            let token = try await tokenProvider.getToken()
             request.addValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         } catch {
             if target.isAuthenticationRequired {
