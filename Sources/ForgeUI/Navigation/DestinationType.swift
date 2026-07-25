@@ -5,7 +5,6 @@
 //  Created by Dino Čatalinac on 20.05.2026..
 //
 
-import SwiftUI
-import ForgeCore
+import Foundation
 
 public typealias DestinationType = Hashable & Identifiable & Sendable
