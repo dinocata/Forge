@@ -1,12 +1,12 @@
 # Forge
 
-Forge is a Swift package of small, reusable foundations for Apple-platform applications. It provides common utilities in `ForgeCore` and a target-driven, async/await HTTP client in `ForgeNetworking`.
+Forge is a Swift package of reusable foundations for Apple-platform applications. It provides general utilities in `ForgeCore`, HTTP transport in `ForgeNetworking`, persistence helpers in `ForgePersistence`, and SwiftUI building blocks in `ForgeUI`.
 
 Use Forge to keep application-specific endpoint definitions, authentication storage, and logging implementations in an app while sharing the transport, request construction, multipart upload, decoding, and concurrency utilities across features.
 
 ## Features
 
-- Two focused library products: `ForgeCore` and `ForgeNetworking`.
+- Four focused library products: `ForgeCore`, `ForgeNetworking`, `ForgePersistence`, and `ForgeUI`.
 - Async utilities: retry with exponential backoff, async-sequence collection, and stream erasure.
 - JSON decoding for ISO 8601 dates with optional fractional seconds and date-only fallback.
 - Type-erased encoding with `AnyEncodable`.
@@ -15,6 +15,8 @@ Use Forge to keep application-specific endpoint definitions, authentication stor
 - Configurable base URL, default headers, timeouts, slow-request logging, and an injected authentication provider.
 - Typed API error bodies, HTTP status-code classification, multipart uploads, and byte streaming.
 - Sanitized cURL output that redacts selected sensitive headers and request bodies.
+- SwiftData container and `UserDefaults` helpers for persistence-focused apps.
+- SwiftUI navigation, transitions, layout, gradient, and button helpers.
 
 ## Requirements
 
@@ -51,7 +53,9 @@ Add the required products to your target:
     name: "MyApp",
     dependencies: [
         .product(name: "ForgeCore", package: "Forge"),
-        .product(name: "ForgeNetworking", package: "Forge")
+        .product(name: "ForgeNetworking", package: "Forge"),
+        .product(name: "ForgePersistence", package: "Forge"),
+        .product(name: "ForgeUI", package: "Forge")
     ]
 )
 ```
@@ -62,6 +66,8 @@ Add the required products to your target:
 | --- | --- |
 | `ForgeCore` | General-purpose utilities, logging abstractions, JSON date decoding, and async-sequence helpers. |
 | `ForgeNetworking` | HTTP transport, request targets, authentication integration, errors, uploads, and HTTP-specific models. Depends on `ForgeCore`. |
+| `ForgePersistence` | SwiftData container abstractions, domain-model conversion, and Codable `UserDefaults` storage. Depends on `ForgeCore`. |
+| `ForgeUI` | SwiftUI navigation, flow layout, transitions, angle-based gradients, and button helpers. Depends on `ForgeCore`. |
 
 ## Package Structure
 
@@ -72,15 +78,24 @@ Forge
 │   ├── JSON decoding and encoding utilities
 │   ├── Optional and Equatable helpers
 │   └── ForgeLogger and LogLevel
-└── ForgeNetworking
+├── ForgeNetworking
     ├── Target and TokenProvider protocols
     ├── NetworkService and APIClient
     ├── HTTP methods, status codes, and errors
     ├── Multipart upload types
     └── URLRequest construction and cURL rendering
+├── ForgePersistence
+│   ├── SwiftData model-container abstractions
+│   ├── Domain-model conversion protocol
+│   └── Codable UserDefaults storage
+└── ForgeUI
+    ├── Router and destination abstractions
+    ├── Flow layout and button helpers
+    ├── SwiftUI transitions
+    └── Gradient utilities
 ```
 
-`ForgeCore` does not depend on `ForgeNetworking`. Put generic, non-HTTP utilities there. Put HTTP transport concerns in `ForgeNetworking`; define concrete endpoints, API-error bodies, credentials, and logger implementations in the consuming application.
+`ForgeCore` has no dependency on the other Forge modules. Put generic, non-HTTP utilities there. Put HTTP transport concerns in `ForgeNetworking`, persistence infrastructure in `ForgePersistence`, and broadly reusable SwiftUI utilities in `ForgeUI`; define app-specific endpoints, models, credentials, and visual design systems in the consuming application.
 
 ## Quick Start
 
@@ -358,10 +373,12 @@ print(request.cURLCompact)
 Forge has a one-way dependency graph:
 
 ```text
-ForgeNetworking ──> ForgeCore ──> swift-async-algorithms
+ForgeNetworking  ──> ForgeCore ──> swift-async-algorithms
+ForgePersistence ──> ForgeCore
+ForgeUI          ──> ForgeCore
 ```
 
-`ForgeCore` exports its utilities directly. `ForgeNetworking` imports `ForgeCore` for `ForgeLogger` and the date-decoding strategy, then builds requests through `Target`, obtains credentials through `TokenProvider`, and executes them with an internally configured `URLSession`.
+`ForgeCore` exports its utilities directly. `ForgeNetworking` imports `ForgeCore` for `ForgeLogger` and the date-decoding strategy, then builds requests through `Target`, obtains credentials through `TokenProvider`, and executes them with an internally configured `URLSession`. `ForgePersistence` provides persistence-focused abstractions, while `ForgeUI` provides application-agnostic SwiftUI utilities without imposing an app design system.
 
 The public extension points are deliberately protocol-based:
 
@@ -432,7 +449,7 @@ Run its test targets:
 swift test
 ```
 
-When contributing, keep shared language and concurrency utilities in `ForgeCore`; keep HTTP-specific behavior in `ForgeNetworking`. Add focused tests alongside the affected target under `Tests`.
+When contributing, keep shared language and concurrency utilities in `ForgeCore`; keep HTTP-specific behavior in `ForgeNetworking`, persistence infrastructure in `ForgePersistence`, and app-agnostic SwiftUI utilities in `ForgeUI`. Add focused tests alongside the affected target under `Tests`.
 
 ## License
 
