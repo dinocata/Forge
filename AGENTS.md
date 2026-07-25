@@ -2,6 +2,7 @@
 
 ## Scope and module boundaries
 
+- Read the repository `README.md` before proposing or implementing module-level features, public APIs, or architectural changes. Treat it as the source of truth for Forge's products, responsibilities, and dependency boundaries.
 - Forge is an app-agnostic Swift package. Do not add Foundry-specific models, branding, screens, endpoints, or design tokens here.
 - Keep generic utilities, concurrency helpers, encoding/decoding helpers, and logging abstractions in `ForgeCore`.
 - Keep HTTP transport, request construction, authentication integration, uploads, and network errors in `ForgeNetworking`.
