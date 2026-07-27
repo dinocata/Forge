@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgeCore"
                BuildableName = "ForgeCore"
+               BlueprintName = "ForgeCore"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -30,6 +31,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgeNetworking"
                BuildableName = "ForgeNetworking"
+               BlueprintName = "ForgeNetworking"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -43,6 +45,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgePersistence"
                BuildableName = "ForgePersistence"
+               BlueprintName = "ForgePersistence"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -56,6 +59,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgeUI"
                BuildableName = "ForgeUI"
+               BlueprintName = "ForgeUI"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -74,6 +78,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgePersistenceTests"
                BuildableName = "ForgePersistenceTests"
+               BlueprintName = "ForgePersistenceTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>
@@ -83,6 +88,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgeNetworkingTests"
                BuildableName = "ForgeNetworkingTests"
+               BlueprintName = "ForgeNetworkingTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>
@@ -92,6 +98,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgeCoreTests"
                BuildableName = "ForgeCoreTests"
+               BlueprintName = "ForgeCoreTests"
                ReferencedContainer = "container:">
             </BuildableReference>
          </TestableReference>
@@ -120,6 +127,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ForgeCore"
             BuildableName = "ForgeCore"
+            BlueprintName = "ForgeCore"
             ReferencedContainer = "container:">
          </BuildableReference>
       </MacroExpansion>

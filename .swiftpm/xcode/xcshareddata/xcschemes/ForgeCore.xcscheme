@@ -17,6 +17,7 @@
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "ForgeCore"
                BuildableName = "ForgeCore"
+               BlueprintName = "ForgeCore"
                ReferencedContainer = "container:">
             </BuildableReference>
          </BuildActionEntry>
@@ -52,6 +53,7 @@
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "ForgeCore"
             BuildableName = "ForgeCore"
+            BlueprintName = "ForgeCore"
             ReferencedContainer = "container:">
          </BuildableReference>
       </MacroExpansion>
