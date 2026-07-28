@@ -28,7 +28,12 @@ extension IdentifiedArray: Collection {
   @inlinable
   @inline(__always)
   public subscript(id id: ID) -> Element? {
-    self._dictionary[id]
+      get {
+          self._dictionary[id]
+      }
+      set {
+          self._dictionary[id] = newValue
+      }
   }
 
   /// Returns a new array containing the elements of the array that satisfy the given predicate.
