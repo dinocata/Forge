@@ -19,9 +19,11 @@ where Items.Element: Identifiable, Items.Index == Int {
     let interval: TimeInterval?
     let pageWidthRatio: CGFloat
     let spacing: CGFloat
+    let sizesToActivePage: Bool
     let content: (Items.Element) -> Content
 
     @State private var frameWidth: CGFloat = 0
+    @State private var pageHeights: [Int: CGFloat] = [:]
     @State private var scrollPosition: Int?
     @State private var isUserInteracting: Bool = false
     @State private var isScrollingProgrammatically: Bool = false
@@ -29,13 +31,25 @@ where Items.Element: Identifiable, Items.Index == Int {
     @State private var shouldUpdateScrollPosition: Bool = true
     @State private var autoScrollTask: Task<Void, Error>?
 
-    init(
+    /// Creates a carousel that wraps seamlessly around its item collection.
+    ///
+    /// - Parameters:
+    ///   - items: The items displayed by the carousel.
+    ///   - activeIndex: The index of the currently selected item.
+    ///   - pageOffset: The number of duplicated pages placed at each edge to support seamless wrapping.
+    ///   - interval: The automatic paging interval, or `nil` to disable automatic paging.
+    ///   - pageWidthRatio: The proportion of the carousel width occupied by one page.
+    ///   - spacing: Horizontal padding applied to each page.
+    ///   - sizesToActivePage: Whether the carousel adopts the active page's intrinsic height.
+    ///   - content: A view builder that creates a page for an item.
+    public init(
         items: Items,
         activeIndex: Binding<Int>,
         pageOffset: Int,
         interval: TimeInterval?,
         pageWidthRatio: CGFloat = 1,
         spacing: CGFloat = 0,
+        sizesToActivePage: Bool = false,
         @ViewBuilder content: @escaping (Items.Element) -> Content
     ) {
         self.items = items
@@ -44,6 +58,7 @@ where Items.Element: Identifiable, Items.Index == Int {
         self.interval = interval
         self.pageWidthRatio = pageWidthRatio
         self.spacing = spacing
+        self.sizesToActivePage = sizesToActivePage
         self.content = content
     }
 
@@ -62,6 +77,16 @@ where Items.Element: Identifiable, Items.Index == Int {
                     content(item)
                         .padding(.horizontal, spacing)
                         .frame(width: pageWidth)
+                        .fixedSize(horizontal: false, vertical: sizesToActivePage)
+                        .onGeometryChange(for: CGFloat.self) { geometry in
+                            geometry.size.height.rounded(.up)
+                        } action: { height in
+                            guard sizesToActivePage else {
+                                return
+                            }
+
+                            pageHeights[index] = height
+                        }
                         .contentShape(.rect)
                         .onTapGesture {
                             guard !isScrollingProgrammatically else {
@@ -132,6 +157,7 @@ where Items.Element: Identifiable, Items.Index == Int {
         }
         .sensoryFeedback(.selection, trigger: interval == nil ? activeIndex : nil)
         .frame(maxWidth: .infinity)
+        .frame(height: activePageHeight, alignment: .top)
         .onGeometryChange(for: CGRect.self) { proxy in
             proxy.frame(in: .global)
         } action: {
@@ -140,6 +166,14 @@ where Items.Element: Identifiable, Items.Index == Int {
             }
             frameWidth = $0.width
         }
+    }
+
+    private var activePageHeight: CGFloat? {
+        guard sizesToActivePage, let scrollPosition else {
+            return nil
+        }
+
+        return pageHeights[scrollPosition]
     }
 
     @ViewBuilder
