@@ -25,32 +25,6 @@ public extension Date {
         Calendar.current.isDateInYesterday(self)
     }
 
-    /// `true` if the date is today or within the next 6 days.
-    var isThisWeek: Bool {
-        let calendar = Calendar.current
-        let now = Date()
-        let startOfToday = calendar.startOfDay(for: now)
-        let endOfWeek = calendar.date(byAdding: .day, value: 6, to: startOfToday).forceUnwrap
-        return self >= startOfToday && self <= endOfWeek
-    }
-
-    /// `true` if the date is now or within the past 6 days.
-    var wasThisWeek: Bool {
-        let calendar = Calendar.current
-        let now = Date()
-        let startOfToday = calendar.startOfDay(for: now)
-        let startOfWeek = calendar.date(byAdding: .day, value: -6, to: startOfToday).forceUnwrap
-        return self >= startOfWeek && self <= now
-    }
-
-    var isThisMonth: Bool {
-        Calendar.current.isDate(self, equalTo: Date(), toGranularity: .month)
-    }
-
-    var isThisYear: Bool {
-        Calendar.current.isDate(self, equalTo: Date(), toGranularity: .year)
-    }
-
     var age: Int {
         Calendar.current.dateComponents([.year], from: self, to: .now).year ?? 0
     }
@@ -73,6 +47,10 @@ public extension Date {
         }
 
         return .init(start: interval.start.startOfDay, end: lastDayOfWeek.endOfDay)
+    }
+
+    func isSame(_ component: Calendar.Component, as referenceDate: Date = .now) -> Bool {
+        Calendar.current.isDate(self, inSame: component, as: referenceDate)
     }
 
     /// Returns a localized relative day name for yesterday, today, or tomorrow.
