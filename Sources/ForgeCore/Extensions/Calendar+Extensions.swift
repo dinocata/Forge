@@ -14,4 +14,8 @@ public extension Calendar {
 
         return dateInterval.start == referenceInterval.start
     }
+
+    func nextFull(_ component: Component, after date: Date) -> Date? {
+        dateInterval(of: component, for: date)?.end
+    }
 }

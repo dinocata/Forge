@@ -53,6 +53,10 @@ public extension Date {
         Calendar.current.isDate(self, inSame: component, as: referenceDate)
     }
 
+    func nextFull(_ component: Calendar.Component) -> Date {
+        Calendar.current.dateInterval(of: component, for: self)?.end ?? date(byAdding: component, value: 1)
+    }
+
     /// Returns a localized relative day name for yesterday, today, or tomorrow.
     ///
     /// Dates outside that range return `nil` so callers can apply a
