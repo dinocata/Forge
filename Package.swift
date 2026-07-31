@@ -68,7 +68,7 @@ let package = Package(
             name: "ForgeUI",
             dependencies: [
                 "ForgeCore",
-                .product(name: "Flow", package: "https://github.com/tevelee/SwiftUI-Flow")
+                .product(name: "Flow", package: "SwiftUI-Flow")
             ],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
