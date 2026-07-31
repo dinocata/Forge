@@ -84,6 +84,8 @@ public enum ResultState<T> {
     }
 }
 
+extension ResultState: Sendable where T == Sendable {}
+
 extension ResultState: Equatable {
 
     public static func == (lhs: ResultState, rhs: ResultState) -> Bool {
