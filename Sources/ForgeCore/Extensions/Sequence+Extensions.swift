@@ -114,6 +114,12 @@ public extension Sequence {
         }
     }
 
+    func min<T: Comparable>(by keyPath: KeyPath<Element, T>) -> Element? {
+        self.min { lhs, rhs in
+            lhs[keyPath: keyPath] < rhs[keyPath: keyPath]
+        }
+    }
+
     func max<T: Comparable>(by keyPath: KeyPath<Element, T>) -> Element? {
         self.max { lhs, rhs in
             lhs[keyPath: keyPath] < rhs[keyPath: keyPath]
