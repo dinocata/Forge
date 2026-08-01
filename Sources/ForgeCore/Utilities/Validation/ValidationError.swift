@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum ValidationError: Error, Equatable, Sendable {
+public enum ValidationError: LocalizedError, Equatable, Sendable {
     case generic(_ message: String? = nil)
     case required(_ message: String? = nil)
     case tooShort(_ message: String? = nil)
@@ -33,5 +33,12 @@ public enum ValidationError: Error, Equatable, Sendable {
         case .alreadyExists(let message):
             return message ?? "This value is already taken"
         }
+    }
+}
+
+extension ValidationError {
+
+    public var errorDescription: String? {
+        message
     }
 }
