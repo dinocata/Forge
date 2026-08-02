@@ -8,7 +8,13 @@
 import Foundation
 
 public struct PaginationResponse<Item, Cursor> {
-    let items: [Item]
-    let next: Cursor?
-    let previous: Cursor?
+    public let items: [Item]
+    public let next: Cursor?
+    public let previous: Cursor?
+
+    public init(items: [Item], next: Cursor?, previous: Cursor?) {
+        self.items = items
+        self.next = next
+        self.previous = previous
+    }
 }
