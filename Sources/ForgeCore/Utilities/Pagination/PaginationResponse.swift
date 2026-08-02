@@ -20,3 +20,6 @@ public struct PaginationResponse<Item, Cursor> {
 }
 
 extension PaginationResponse: Sendable where Item: Sendable, Cursor: Sendable {}
+extension PaginationResponse: Decodable where Item: Decodable, Cursor: Decodable {}
+extension PaginationResponse: Hashable where Item: Hashable, Cursor: Hashable {}
+extension PaginationResponse: Equatable where Item: Equatable, Cursor: Equatable {}
