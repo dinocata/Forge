@@ -18,3 +18,5 @@ public struct PaginationResponse<Item, Cursor> {
         self.previous = previous
     }
 }
+
+extension PaginationResponse: Sendable where Item == Sendable, Cursor == Sendable {}
