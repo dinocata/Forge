@@ -19,4 +19,4 @@ public struct PaginationResponse<Item, Cursor> {
     }
 }
 
-extension PaginationResponse: Sendable where Item == Sendable, Cursor == Sendable {}
+extension PaginationResponse: Sendable where Item: Sendable, Cursor: Sendable {}
