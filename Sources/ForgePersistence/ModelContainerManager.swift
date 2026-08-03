@@ -23,15 +23,18 @@ public final class ModelContainerManager: @unchecked Sendable, ModelContainerMan
     private let logger: ForgeLogger?
     private var _modelContainer: ModelContainer?
     private let lock: NSLock = .init()
+    private let resetStoreOnContainerFailure: Bool
 
     public init(
         models: [any PersistentModel.Type],
         isStoredInMemoryOnly: Bool = false,
-        logger: ForgeLogger? = nil
+        logger: ForgeLogger? = nil,
+        resetStoreOnContainerFailure: Bool = false
     ) {
         self.models = models
         self.logger = logger
         self.isStoredInMemoryOnly = isStoredInMemoryOnly
+        self.resetStoreOnContainerFailure = resetStoreOnContainerFailure
     }
 
     public var modelContainer: ModelContainer {
@@ -96,8 +99,12 @@ public final class ModelContainerManager: @unchecked Sendable, ModelContainerMan
                 """
             )
 
-            try? FileManager.default.removeItem(at: configuration.url)
-            return try ModelContainer(for: schema, configurations: [configuration])
+            if resetStoreOnContainerFailure {
+                try? FileManager.default.removeItem(at: configuration.url)
+                return try ModelContainer(for: schema, configurations: [configuration])
+            } else {
+                fatalError(error.localizedDescription)
+            }
         }
     }
 }
