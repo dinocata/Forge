@@ -12,15 +12,14 @@ public protocol DomainRepresentable {
 
     var toDomain: DomainType { get }
     init(from domain: DomainType)
-    /// Updates the receiver with the given domain value. Returns `true` if the update was applied;
-    /// `false` if the type does not support in-place update (e.g. default impl). Callers can fall back to delete+insert when `false`.
-    mutating func update(with domain: DomainType) -> Bool
-}
 
-public extension DomainRepresentable {
-
-    /// Default: no in-place update; callers (e.g. `cache`) will replace by delete+insert.
-    mutating func update(with domain: DomainType) -> Bool {
-        false
-    }
+    /// Takes on `domain`'s values in place, without replacing the stored record.
+    ///
+    /// Deliberately has no default implementation. A conformer that says nothing
+    /// would otherwise fall back to delete-and-reinsert, which destroys the row:
+    /// anything the record owns that the domain type does not carry — a
+    /// relationship, a creation date — is silently lost, and every child record
+    /// is deleted and reinserted along with it. That is a decision worth making
+    /// on purpose, so the compiler asks for one.
+    mutating func update(with domain: DomainType)
 }
