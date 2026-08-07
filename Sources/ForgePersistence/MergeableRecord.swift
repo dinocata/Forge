@@ -5,6 +5,7 @@
 //  Created by Dino Catalinac on 07.08.2026.
 //
 
+import ForgeCore
 import Foundation
 import SwiftData
 
@@ -16,20 +17,14 @@ import SwiftData
 /// it — even when nothing about them changed. ``absorb(_:ordinal:)`` is the
 /// alternative: the row survives, so there is nothing to carry over, and only
 /// the fields that actually differ are written.
-public protocol MergeableRecord: PersistentModel, DomainRepresentable {
+public protocol MergeableRecord: PersistentModel, DomainRepresentable where DomainType: Identifiable {
 
-    /// What a record and a domain value are matched on while reconciling a collection.
+    /// Which stored column carries this record's identity.
     ///
-    /// Not always the record's own `id`. A leaf record often has no identity
-    /// beyond the thing it describes, which is usually what its domain type uses
-    /// for identity too.
-    associatedtype MergeKey: Hashable
-
-    /// This record's identity within its parent's collection.
-    var mergeKey: MergeKey { get }
-
-    /// The identity a domain value claims within its parent's collection.
-    static func mergeKey(for domain: DomainType) -> MergeKey
+    /// The record has to name it, because only the record knows which of its
+    /// columns the domain value's identity was written to — often not an `id`
+    /// at all, but the natural key of the thing it describes.
+    var mergeKey: DomainType.ID { get }
 
     /// Creates a record for a value at a position within its parent's collection.
     init(from domain: DomainType, ordinal: Int)
@@ -53,27 +48,25 @@ public extension Array where Element: MergeableRecord {
     /// from a relationship only disassociates it and would leave the row behind
     /// as an orphan.
     mutating func reconcile(
-        with values: some Sequence<Element.DomainType>,
+        with values: some Collection<Element.DomainType>,
         in modelContext: ModelContext?
     ) {
-        let recordsByKey = Dictionary(map { ($0.mergeKey, $0) }, uniquingKeysWith: { first, _ in first })
-        var reusedIDs: Set<PersistentIdentifier> = []
-        var reconciled: [Element] = []
+        let existingRecords = asIdentifiedDictionary(by: \.mergeKey)
+        let survivingKeys = Set(values.map(\.id))
 
-        for (ordinal, value) in values.enumerated() {
-            guard let record = recordsByKey[Element.mergeKey(for: value)] else {
-                reconciled.append(Element(from: value, ordinal: ordinal))
-                continue
+        let reconciled = values.enumerated().map { ordinal, value in
+            guard let record = existingRecords[value.id] else {
+                return Element(from: value, ordinal: ordinal)
             }
 
             record.absorb(value, ordinal: ordinal)
-            reusedIDs.insert(record.persistentModelID)
-            reconciled.append(record)
+            return record
         }
 
-        // Computed against the collection as it still stands, and by row rather
-        // than by merge key, so a duplicate key cannot leave a row undeleted.
-        let orphans = filter { !reusedIDs.contains($0.persistentModelID) }
+        // A merge key is a unique column, so no surviving key can leave a second
+        // row behind unmatched.
+        let orphans = filter { !survivingKeys.contains($0.mergeKey) }
+
         self = reconciled
         orphans.forEach { modelContext?.delete($0) }
     }
