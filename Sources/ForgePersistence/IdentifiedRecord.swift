@@ -18,18 +18,20 @@ import SwiftData
 /// rather than that being a rule someone has to remember.
 public protocol IdentifiedRecord: PersistentModel, DomainRepresentable {
 
-    associatedtype RecordID: Hashable
-
-    /// The identity `domain` is stored under.
-    static func recordID(for domain: DomainType) -> RecordID
-
-    /// Finds the one record carrying this identity.
-    static func fetchDescriptor(id: RecordID) -> FetchDescriptor<Self>
+    /// Finds the stored record that holds `domain`, if there is one.
+    ///
+    /// This is deliberately the only requirement, and it is phrased as a lookup
+    /// rather than as an identity to extract. A record whose key is the domain
+    /// value's `id` answers it by forwarding to that; a singleton answers it with
+    /// its fixed key, without having to invent an `id` on a domain value that
+    /// has none. Both are one line, and neither needs the protocol to know which
+    /// kind it is dealing with.
+    static func fetchDescriptor(for domain: DomainType) -> FetchDescriptor<Self>
 }
 
 public extension ModelContext {
 
-    /// Updates the stored record carrying `domain`'s identity, or inserts one.
+    /// Updates the stored record holding `domain`, or inserts one.
     ///
     /// Updating in place is what keeps the row — and everything hanging off it
     /// that the domain type does not carry — intact. Only a genuinely new value
@@ -42,7 +44,7 @@ public extension ModelContext {
     /// stays with the caller.
     @discardableResult
     func upsert<Record: IdentifiedRecord>(_ domain: Record.DomainType) throws -> Record {
-        guard var existingRecord = try fetch(Record.fetchDescriptor(id: Record.recordID(for: domain))).first else {
+        guard var existingRecord = try fetch(Record.fetchDescriptor(for: domain)).first else {
             let record = Record(from: domain)
             insert(record)
             return record
