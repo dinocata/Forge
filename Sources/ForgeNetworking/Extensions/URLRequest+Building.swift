@@ -37,7 +37,9 @@ public extension URLRequest {
     private func cURLString() -> String {
         var components = ["curl -v"]
         if let httpMethod { components.append("-X \(httpMethod)") }
-        for (key, value) in (allHTTPHeaderFields ?? [:]).sorted(by: { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }) {
+        let sortedHeaderFields = (allHTTPHeaderFields ?? [:])
+            .sorted { $0.key.localizedCaseInsensitiveCompare($1.key) == .orderedAscending }
+        for (key, value) in sortedHeaderFields {
             let safeValue: String
             if Self.sensitiveHeaderFields.contains(key.lowercased()) {
                 let parts = value.split(separator: " ", maxSplits: 1)

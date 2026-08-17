@@ -1,8 +1,6 @@
-
 import ForgeCore
 import Foundation
 
-// swiftlint:disable file_length
 public final class NetworkService<APIErrorResponse: Decodable & Sendable>: Sendable {
 
     public struct Config: Sendable {

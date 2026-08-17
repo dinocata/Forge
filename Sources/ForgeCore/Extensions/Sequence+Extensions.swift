@@ -128,11 +128,6 @@ public extension Sequence {
 }
 
 private struct IndexedWrapper<Wrapped>: Sendable where Wrapped: Sendable {
-    public let index: Int
-    public let wrapped: Wrapped
-
-    public init(index: Int, wrapped: Wrapped) {
-        self.index = index
-        self.wrapped = wrapped
-    }
+    let index: Int
+    let wrapped: Wrapped
 }

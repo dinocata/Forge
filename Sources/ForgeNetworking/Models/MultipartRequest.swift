@@ -33,6 +33,9 @@ public struct MultipartRequest {
     }
 
     private func sanitize(_ value: String) -> String {
-        value.replacingOccurrences(of: "\r", with: "").replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: "\"", with: "\\\"")
+        value
+            .replacingOccurrences(of: "\r", with: "")
+            .replacingOccurrences(of: "\n", with: "")
+            .replacingOccurrences(of: "\"", with: "\\\"")
     }
 }

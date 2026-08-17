@@ -1,0 +1,39 @@
+#!/bin/sh
+
+set -eu
+
+PROJECT_ROOT="$(git rev-parse --show-toplevel)"
+
+CYAN="$(printf '\033[36m')"
+GREEN="$(printf '\033[32m')"
+YELLOW="$(printf '\033[33m')"
+RESET="$(printf '\033[0m')"
+
+printf '%sSwiftLint: autocorrecting and validating staged commit...%s\n' "${CYAN}" "${RESET}"
+
+DIFF_BEFORE="$(mktemp)"
+DIFF_AFTER="$(mktemp)"
+trap 'rm -f "${DIFF_BEFORE}" "${DIFF_AFTER}"' EXIT
+
+git diff --binary -- '*.swift' >"${DIFF_BEFORE}"
+
+# `--strict` here is what makes warning-only thresholds binding: nothing lints
+# during `swift build`, so this hook is the only gate, and warnings must not
+# survive into a commit.
+SWIFTLINT_AUTOCORRECT=1 \
+SWIFTLINT_COLOR=1 \
+SWIFTLINT_STRICT=1 \
+    "${PROJECT_ROOT}/Scripts/swiftlint.sh"
+
+git diff --binary -- '*.swift' >"${DIFF_AFTER}"
+
+# Autocorrect stops the commit rather than committing its own edits, so the
+# rewrite lands in a diff the author reviews and stages themselves.
+if ! cmp -s "${DIFF_BEFORE}" "${DIFF_AFTER}"; then
+    printf '%sSwiftLint autocorrected source files. Review and stage those changes, then commit again.%s\n' \
+        "${YELLOW}" \
+        "${RESET}"
+    exit 1
+fi
+
+printf '%sSwiftLint validation passed.%s\n' "${GREEN}" "${RESET}"
