@@ -451,6 +451,32 @@ swift test
 
 When contributing, keep shared language and concurrency utilities in `ForgeCore`; keep HTTP-specific behavior in `ForgeNetworking`, persistence infrastructure in `ForgePersistence`, and app-agnostic SwiftUI utilities in `ForgeUI`. Add focused tests alongside the affected target under `Tests`.
 
+### Linting
+
+SwiftLint enforces the rules in `.swiftlint.yml` over `Sources`; the test targets are deliberately not linted. Install the pre-commit hook once per clone:
+
+```sh
+Scripts/install-git-hooks.sh
+```
+
+This points `core.hooksPath` at `Scripts/git-hooks`. The hook applies SwiftLint's automatic fixes, then validates the result in strict mode. If autocorrect changed a file, the commit is refused rather than completed, so the rewrite arrives as a diff to review and stage instead of landing unseen.
+
+Nothing lints during `swift build`. Forge has no Xcode project to attach a build phase to, and no SwiftLint build tool plugin is attached to its targets on purpose — a plugin would add a build dependency to every package that consumes Forge and would run whenever those packages build it. Run the same verdict the hook uses on demand instead:
+
+```sh
+SWIFTLINT_STRICT=1 Scripts/swiftlint.sh
+```
+
+`Scripts/swiftlint.sh` locates a SwiftLint binary itself, preferring a `SwiftLintBinary.artifactbundle` that an Xcode project has already resolved into DerivedData — so a consuming app and this package lint with the same version — and falling back to `swiftlint` on `PATH`. Three environment variables control it:
+
+| Variable | Effect when set to `1` |
+| --- | --- |
+| `SWIFTLINT_AUTOCORRECT` | Applies SwiftLint's automatic fixes before validating. |
+| `SWIFTLINT_STRICT` | Promotes every warning to an error, so warning-only thresholds fail the run. |
+| `SWIFTLINT_COLOR` | Colorizes output by severity. |
+
+Most rules declare only a warning threshold, so a plain `Scripts/swiftlint.sh` run reports violations without failing; `force_unwrapping`, `force_try`, and `force_cast` are errors outright. The split is deliberate — warnings should not interrupt an edit-and-build cycle, and should not survive into a commit — so fix the violation rather than adjusting one side to agree with the other.
+
 ## License
 
 No license file is currently included. Add the project's license terms here.
