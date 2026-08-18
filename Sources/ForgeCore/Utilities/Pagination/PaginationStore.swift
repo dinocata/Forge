@@ -73,9 +73,9 @@ public final class PaginationStore<Item: Identifiable & Equatable, Cursor: Senda
 
         var currentItems: IdentifiedArrayOf<Item> = refresh ? [] : self.items
 
-        await asyncState.perform(skipLoadingWhenSuccessful: false) {
+        await asyncState.perform(options: .init(skipLoadingWhenSuccessful: false)) {
             try Task.checkCancellation()
-            let page = try await dataProvider(nextPageCursor, pageSize, refresh)
+            let page = try await dataProvider(self.nextPageCursor, self.pageSize, refresh)
             try Task.checkCancellation()
 
             if let nextPageCursor = page.next {

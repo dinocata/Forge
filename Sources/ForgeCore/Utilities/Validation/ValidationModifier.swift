@@ -122,7 +122,13 @@ private struct ValidationModifier: ViewModifier {
             return
         }
 
-        await validationState.perform(showLoadingAfter: 0, skipLoadingWhenSuccessful: false, resetOnCancellation: false) {
+        let options = AsyncOperationOptions(
+            showLoadingAfter: 0,
+            skipLoadingWhenSuccessful: false,
+            resetOnCancellation: false
+        )
+
+        await validationState.perform(options: options) {
             for validator in asyncValidators {
                 try await validator.validateAsync(text)
             }
