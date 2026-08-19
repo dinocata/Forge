@@ -70,6 +70,26 @@ public extension Sequence where Element: Identifiable {
     var asIdentifiedDictionary: [Element.ID: Element] {
         asIdentifiedDictionary(by: \.id)
     }
+
+    /// The elements as an identified collection, or `nil` when two share an identity.
+    ///
+    /// **`asIdentifiedArray` traps on a repeated identity**, because
+    /// `IdentifiedArray(uniqueElements:)` promises uniqueness and enforces it with
+    /// a precondition. That is the right contract for values the app built itself,
+    /// where a duplicate is a programmer error — and the wrong one for values that
+    /// arrived from outside it, where a decoded payload or an imported file can
+    /// carry a repeat and must be refused rather than crash on.
+    var identifiedIfUnique: IdentifiedArrayOf<Element>? {
+        var identified = IdentifiedArrayOf<Element>()
+
+        for element in self {
+            guard identified.append(element).inserted else {
+                return nil
+            }
+        }
+
+        return identified
+    }
 }
 
 public extension Sequence {
