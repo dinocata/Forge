@@ -92,6 +92,13 @@ let package = Package(
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ]
+        ),
+        .testTarget(
+            name: "ForgeUITests",
+            dependencies: ["ForgeUI"],
+            swiftSettings: [
+                .enableUpcomingFeature("ApproachableConcurrency"),
+            ]
         )
     ]
 )

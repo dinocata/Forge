@@ -12,7 +12,7 @@ import os
 @MainActor
 public protocol RouterType {
     associatedtype Destination: DestinationType
-    func push(_ destination: Destination)
+    func push(_ destinations: Destination...)
     func presentSheet(_ destination: Destination)
     #if os(iOS)
     func presentFullscreenCover(_ destination: Destination)
@@ -84,18 +84,27 @@ public final class Router<Destination: DestinationType>: RouterType {
         self.path = path
     }
 
-    public func push(_ destination: Destination) {
-        guard destination != root else {
+    public func push(_ destinations: Destination...) {
+        push(contentsOf: destinations)
+    }
+
+    /// Appends several destinations as one navigation-path update.
+    public func push(contentsOf destinations: [Destination]) {
+        guard destinations.allSatisfy({ $0 != root }) else {
             NavigationLog.logger.fault("Cannot push root destination.")
             assertionFailure("Cannot push root destination.")
             return
         }
 
-        guard destination != currentDestination else {
-            return
+        var currentDestination = currentDestination
+        var destinationsToAppend: [Destination] = []
+
+        for destination in destinations where destination != currentDestination {
+            destinationsToAppend.append(destination)
+            currentDestination = destination
         }
 
-        path.append(destination)
+        path.append(contentsOf: destinationsToAppend)
     }
 
     public func presentSheet(_ destination: Destination) {
