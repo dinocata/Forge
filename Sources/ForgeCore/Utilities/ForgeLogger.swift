@@ -2,9 +2,19 @@
 
 import Foundation
 
+/// A destination for diagnostics. Conformers implement the requirements below, which take every
+/// value explicitly; callers use the conveniences in the extension, which fill in the level and
+/// the call site.
+///
+/// The requirement takes its first argument unlabelled and the convenience labels it, so the two
+/// cannot be mistaken for one another. They must differ somewhere: an extension member whose
+/// signature matches a requirement *becomes* that requirement's default implementation, so a
+/// convenience that only added default arguments would witness the requirement it meant to call
+/// and recurse into itself forever. As written, a conformer that gets the shape wrong fails to
+/// compile instead.
 public protocol ForgeLogger: Sendable {
     func log(
-        message: String,
+        _ message: String,
         level: LogLevel,
         file: StaticString,
         function: StaticString,
@@ -12,7 +22,7 @@ public protocol ForgeLogger: Sendable {
     )
 
     func capture(
-        error: Error,
+        _ error: Error,
         message: String?,
         file: StaticString,
         function: StaticString,
@@ -28,7 +38,7 @@ public extension ForgeLogger {
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        log(message: message, level: level, file: file, function: function, line: line)
+        log(message, level: level, file: file, function: function, line: line)
     }
 
     func capture(
@@ -38,7 +48,7 @@ public extension ForgeLogger {
         function: StaticString = #function,
         line: UInt = #line
     ) {
-        capture(error: error, message: message, file: file, function: function, line: line)
+        capture(error, message: message, file: file, function: function, line: line)
     }
 }
 
