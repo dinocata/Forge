@@ -25,8 +25,20 @@ public extension Date {
         Calendar.current.isDateInYesterday(self)
     }
 
+    /// Completed years between this date and now, read as a birth date.
     var age: Int {
-        Calendar.current.dateComponents([.year], from: self, to: .now).year ?? 0
+        age(asOf: .now)
+    }
+
+    /// Completed years between this date and `date`, read as a birth date.
+    ///
+    /// Takes the moment to measure against rather than always using now, so a value derived from
+    /// an age can be recomputed for a past date. Reading a trend otherwise ages every point in it
+    /// to today.
+    ///
+    /// Negative for a date in the future, and zero on a birthday's eve — whole years only.
+    func age(asOf date: Date) -> Int {
+        Calendar.current.dateComponents([.year], from: self, to: date).year ?? 0
     }
 
     var daysAgo: Int {
