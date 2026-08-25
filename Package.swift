@@ -65,9 +65,7 @@ let package = Package(
         ),
         .target(
             name: "ForgeUI",
-            dependencies: [
-                "ForgeCore"
-            ],
+            dependencies: ["ForgeCore", "ForgePersistence"],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ]

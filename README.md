@@ -16,7 +16,7 @@ Use Forge to keep application-specific endpoint definitions, authentication stor
 - Typed API error bodies, HTTP status-code classification, multipart uploads, and byte streaming.
 - Sanitized cURL output that redacts selected sensitive headers and request bodies.
 - SwiftData container and `UserDefaults` helpers for persistence-focused apps.
-- SwiftUI navigation, transitions, layout, gradient, and button helpers.
+- SwiftUI navigation, transitions, layout, gradient, button, and Codable app-storage helpers.
 
 ## Requirements
 
@@ -67,7 +67,7 @@ Add the required products to your target:
 | `ForgeCore` | General-purpose utilities, logging abstractions, JSON date decoding, and async-sequence helpers. |
 | `ForgeNetworking` | HTTP transport, request targets, authentication integration, errors, uploads, and HTTP-specific models. Depends on `ForgeCore`. |
 | `ForgePersistence` | SwiftData container abstractions, domain-model conversion, and Codable `UserDefaults` storage. Depends on `ForgeCore`. |
-| `ForgeUI` | SwiftUI navigation, flow layout, transitions, angle-based gradients, and button helpers. Depends on `ForgeCore`. |
+| `ForgeUI` | SwiftUI navigation, flow layout, transitions, gradients, buttons, and app storage. Depends on `ForgeCore` and `ForgePersistence`. |
 
 ## Package Structure
 
@@ -90,6 +90,7 @@ Forge
 │   └── Codable UserDefaults storage
 └── ForgeUI
     ├── Router and destination abstractions
+    ├── Codable `AppStorage` for application-owned value types
     ├── Flow layout and button helpers
     ├── SwiftUI transitions
     └── Gradient utilities
@@ -375,7 +376,7 @@ Forge has a one-way dependency graph:
 ```text
 ForgeNetworking  ──> ForgeCore ──> swift-async-algorithms
 ForgePersistence ──> ForgeCore
-ForgeUI          ──> ForgeCore
+ForgeUI          ──> ForgePersistence ──> ForgeCore
 ```
 
 `ForgeCore` exports its utilities directly. `ForgeNetworking` imports `ForgeCore` for `ForgeLogger` and the date-decoding strategy, then builds requests through `Target`, obtains credentials through `TokenProvider`, and executes them with an internally configured `URLSession`. `ForgePersistence` provides persistence-focused abstractions, while `ForgeUI` provides application-agnostic SwiftUI utilities without imposing an app design system.
