@@ -9,6 +9,7 @@ Use Forge to keep application-specific endpoint definitions, authentication stor
 - Four focused library products: `ForgeCore`, `ForgeNetworking`, `ForgePersistence`, and `ForgeUI`.
 - Async utilities: retry with exponential backoff, async-sequence collection, and stream erasure.
 - JSON decoding for ISO 8601 dates with optional fractional seconds and date-only fallback.
+- Codable conversion to and from JSON-compatible dictionaries.
 - Type-erased encoding with `AnyEncodable`.
 - Optional, `Equatable`, and logging helpers.
 - Target-driven HTTP requests with JSON encoding and decoding.
@@ -198,6 +199,16 @@ import ForgeCore
 
 let decoder = JSONDecoder()
 decoder.dateDecodingStrategy = .iso8601withOptionalFractionalSeconds
+```
+
+Codable values can cross APIs that expose JSON-compatible dictionaries without manually casting
+each field. Object-shaped values use `encodedDictionary(using:)`; dictionaries use
+`decode(_:using:)`. Pass a configured encoder or decoder when the value needs non-default coding
+strategies.
+
+```swift
+let dictionary = try request.encodedDictionary()
+let decoded = try dictionary.decode(Request.self)
 ```
 
 Use `AnyEncodable` (or `wrapToAnyEncodable`) when an API accepts an `Encodable` value whose concrete type is not known statically.
