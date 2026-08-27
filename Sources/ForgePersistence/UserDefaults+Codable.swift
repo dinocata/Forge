@@ -11,7 +11,11 @@ import os
 
 public extension UserDefaults {
 
-    func getCodable<Value: Codable & Equatable>(_ key: String, defaultValue: Value? = nil) -> Value? {
+    func getCodable<Value: Codable & Equatable>(
+        _ key: String,
+        defaultValue: Value? = nil,
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> Value? {
         guard let object: Any = object(forKey: key) else {
             return defaultValue
         }
@@ -21,7 +25,7 @@ public extension UserDefaults {
         }
 
         do {
-            return try JSONDecoder().decode(Value.self, from: data)
+            return try decoder.decode(Value.self, from: data)
         } catch {
             os_log(
                 "UserDefaults decode failed for key %{public}@ as %{public}@: %{public}@",
@@ -36,8 +40,13 @@ public extension UserDefaults {
     }
 
     @discardableResult
-    func storeCodable<Value: Codable & Equatable>(_ value: Value, forKey key: String) -> Bool {
-        let oldValue: Value? = getCodable(key)
+    func storeCodable<Value: Codable & Equatable>(
+        _ value: Value,
+        forKey key: String,
+        encoder: JSONEncoder = JSONEncoder(),
+        decoder: JSONDecoder = JSONDecoder()
+    ) -> Bool {
+        let oldValue: Value? = getCodable(key, decoder: decoder)
 
         guard value != oldValue else {
             return false
@@ -48,7 +57,7 @@ public extension UserDefaults {
             return true
         } else {
             do {
-                let data: Data = try JSONEncoder().encode(value)
+                let data: Data = try encoder.encode(value)
                 set(data, forKey: key)
                 return true
             } catch {

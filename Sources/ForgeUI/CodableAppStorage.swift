@@ -17,15 +17,21 @@ public struct CodableAppStorage<Value: Codable & Equatable & Sendable>: DynamicP
     private let defaultValue: Value
     private let key: String
     private let store: UserDefaults
+    private let encoder: JSONEncoder
+    private let decoder: JSONDecoder
 
     public init(
         wrappedValue defaultValue: Value,
         _ key: String,
-        store: UserDefaults? = nil
+        store: UserDefaults? = nil,
+        encoder: JSONEncoder = JSONEncoder(),
+        decoder: JSONDecoder = JSONDecoder()
     ) {
         self.defaultValue = defaultValue
         self.key = key
         self.store = store ?? .standard
+        self.encoder = encoder
+        self.decoder = decoder
         _observedData = AppStorage(key, store: store)
     }
 
@@ -34,10 +40,10 @@ public struct CodableAppStorage<Value: Codable & Equatable & Sendable>: DynamicP
             // Reading the AppStorage value registers this dynamic property with SwiftUI. Codable
             // decoding remains owned by ForgePersistence rather than being duplicated here.
             _ = observedData
-            return store.getCodable(key, defaultValue: defaultValue) ?? defaultValue
+            return store.getCodable(key, defaultValue: defaultValue, decoder: decoder) ?? defaultValue
         }
         nonmutating set {
-            store.storeCodable(newValue, forKey: key)
+            store.storeCodable(newValue, forKey: key, encoder: encoder, decoder: decoder)
         }
     }
 
