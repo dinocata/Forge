@@ -52,3 +52,54 @@ private struct Preferences: Codable, Equatable {
         try JSONDecoder().decode(Preferences.self, from: Data(json.utf8))
     }
 }
+
+// MARK: - Optional values
+
+private enum Channel: String, Codable, CodableDefaultValue {
+    case email
+    case push
+
+    static let defaultCodableValue = Channel.email
+}
+
+private struct OptionalPreferences: Codable, Equatable {
+    @CodableDefault
+    var channel: Channel?
+
+    init(channel: Channel?) {
+        self.channel = channel
+    }
+}
+
+/// The reason the optional overload exists: a value written by a newer build, or a case since
+/// retired, must cost that one entry rather than the whole container it was stored in.
+@Test func codableDefaultFallsBackForAnUndecodableOptionalValue() throws {
+    let json = #"{"channel":"carrierPigeon"}"#
+
+    let preferences = try JSONDecoder().decode(OptionalPreferences.self, from: Data(json.utf8))
+
+    #expect(preferences.channel == nil)
+}
+
+@Test func codableDefaultFallsBackForAMissingOptionalValue() throws {
+    let preferences = try JSONDecoder().decode(OptionalPreferences.self, from: Data("{}".utf8))
+
+    #expect(preferences.channel == nil)
+}
+
+/// Falling back must not swallow a value that decodes perfectly well.
+@Test func codableDefaultDecodesAStoredOptionalValue() throws {
+    let json = #"{"channel":"push"}"#
+
+    let preferences = try JSONDecoder().decode(OptionalPreferences.self, from: Data(json.utf8))
+
+    #expect(preferences.channel == .push)
+}
+
+@Test func codableDefaultRoundTripsAnOptionalValue() throws {
+    for preferences in [OptionalPreferences(channel: .push), OptionalPreferences(channel: nil)] {
+        let data = try JSONEncoder().encode(preferences)
+
+        #expect(try JSONDecoder().decode(OptionalPreferences.self, from: data) == preferences)
+    }
+}
