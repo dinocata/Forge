@@ -61,6 +61,66 @@ extension KeyedDecodingContainer {
     }
 }
 
+/// A sequence that can be rebuilt from its own elements.
+///
+/// Neither `Sequence` nor `Collection` requires an initialiser, so neither can be constructed
+/// generically. `RangeReplaceableCollection` and `SetAlgebra` each require one, but no standard
+/// protocol requires it of both `Array` and `Set` — which is why the lenient decoding below would
+/// otherwise need an overload per concrete type.
+public protocol SequenceInitializable: Sequence {
+    init<Source: Sequence>(_ elements: Source) where Source.Element == Element
+}
+
+extension Array: SequenceInitializable {}
+extension Set: SequenceInitializable {}
+
+/// Collections keep the elements they can read rather than failing on the first one they cannot.
+///
+/// Stored data is often written by a different build of the app, and a collection holding one value
+/// this version does not recognise — an enum case added since, or one since retired — would
+/// otherwise fail to decode entirely and take every value beside it with it. Losing all of
+/// someone's selection because of one unreadable entry is worse than losing that entry.
+///
+/// Element-wise leniency comes from ``OptionalValue``, whose decode yields `nil` rather than
+/// throwing — which is also what keeps the unkeyed container advancing, since an element that threw
+/// would leave the index where it was.
+///
+/// Leniency is for the *members*, not the shape: an object where a collection belongs is a
+/// different kind of wrong, still throws, and reaches the fallback only as a missing value.
+public extension KeyedDecodingContainer {
+
+    func decode<C: SequenceInitializable & CodableDefaultValue>(
+        _ type: CodableDefault<C>.Type,
+        forKey key: Key
+    ) throws -> CodableDefault<C> where C.Element: Decodable {
+        try lenientlyDecoded(type, forKey: key, as: C.self)
+    }
+
+    /// The optional case is a separate overload rather than the same one, because `C` and `C?` are
+    /// different types — and because they must fall back differently. A collection whose every
+    /// element was unreadable decodes *empty*, since the value was stored and the user did answer;
+    /// only a value that was never stored at all is `nil`.
+    func decode<C: SequenceInitializable>(
+        _ type: CodableDefault<C?>.Type,
+        forKey key: Key
+    ) throws -> CodableDefault<C?> where C.Element: Decodable {
+        try lenientlyDecoded(type, forKey: key, as: C.self)
+    }
+
+    private func lenientlyDecoded<Value: CodableDefaultValue, C: SequenceInitializable>(
+        _ type: CodableDefault<Value>.Type,
+        forKey key: Key,
+        as collection: C.Type = C.self
+    ) throws -> CodableDefault<Value> where C.Element: Decodable {
+        guard let elements = try decodeIfPresent([OptionalValue<C.Element>].self, forKey: key),
+              let value = C(elements.compactMap(\.value)) as? Value else {
+            return CodableDefault()
+        }
+
+        return CodableDefault(wrappedValue: value)
+    }
+}
+
 extension Bool: CodableDefaultValue {
     public static let defaultCodableValue = false
 }

@@ -103,3 +103,64 @@ private struct OptionalPreferences: Codable, Equatable {
         #expect(try JSONDecoder().decode(OptionalPreferences.self, from: data) == preferences)
     }
 }
+
+// MARK: - Collections
+
+private enum Kind: String, Codable, CodableDefaultValue {
+    case barbell
+    case dumbbell
+
+    static let defaultCodableValue = Kind.barbell
+}
+
+private struct Inventory: Codable, Equatable {
+    @CodableDefault
+    var kinds: [Kind]
+
+    @CodableDefault
+    var owned: Set<Kind>?
+
+    init(kinds: [Kind] = [], owned: Set<Kind>? = nil) {
+        self.kinds = kinds
+        self.owned = owned
+    }
+}
+
+private func inventory(_ json: String) throws -> Inventory {
+    try JSONDecoder().decode(Inventory.self, from: Data(json.utf8))
+}
+
+/// The reason this exists: stored data written by a build that knew a value this one does not must
+/// cost that value alone, not every value beside it.
+@Test func codableDefaultKeepsTheElementsItCanRead() throws {
+    #expect(try inventory(#"{"kinds":["barbell","jetpack","dumbbell"]}"#).kinds == [.barbell, .dumbbell])
+    #expect(try inventory(#"{"owned":["jetpack","dumbbell"]}"#).owned == [.dumbbell])
+}
+
+/// Dropping every element is not the same as never having been given any, and an optional
+/// collection has to keep that difference: the user did answer, unreadably.
+@Test func codableDefaultDistinguishesAnUnreadableCollectionFromAMissingOne() throws {
+    #expect(try inventory(#"{"owned":["jetpack"]}"#).owned == [])
+    #expect(try inventory("{}").owned == nil)
+    #expect(try inventory(#"{"owned":null}"#).owned == nil)
+}
+
+@Test func codableDefaultStillFallsBackForAMissingCollection() throws {
+    #expect(try inventory("{}").kinds.isEmpty)
+}
+
+@Test func codableDefaultRoundTripsCollections() throws {
+    let inventory = Inventory(kinds: [.barbell], owned: [.dumbbell])
+
+    let data = try JSONEncoder().encode(inventory)
+
+    #expect(try JSONDecoder().decode(Inventory.self, from: data) == inventory)
+}
+
+/// Leniency is for the members, not the shape: a collection where an object was expected is a
+/// different kind of wrong and must still fail.
+@Test func codableDefaultDoesNotHideAMalformedCollection() {
+    #expect(throws: DecodingError.self) {
+        try inventory(#"{"kinds":{"a":1}}"#)
+    }
+}
