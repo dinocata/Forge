@@ -18,18 +18,33 @@ public struct FlowLayout: Layout {
         case trailing
     }
 
+    /// Where an item sits in a row taller than itself.
+    ///
+    /// Only matters when a row mixes heights — uniform items, which is what a row of chips usually
+    /// is, look the same whichever this is.
+    public enum ItemAlignment: Sendable {
+        case top
+        case center
+        case bottom
+    }
+
     public var horizontalSpacing: CGFloat
     public var verticalSpacing: CGFloat
     public var alignment: RowAlignment
+    public var itemAlignment: ItemAlignment
 
+    /// - Parameter itemAlignment: Defaults to `.top`, which is where this layout has always put
+    ///   items, so an existing caller renders unchanged.
     public init(
         horizontalSpacing: CGFloat = 8,
         verticalSpacing: CGFloat = 8,
-        alignment: RowAlignment = .center
+        alignment: RowAlignment = .center,
+        itemAlignment: ItemAlignment = .top
     ) {
         self.horizontalSpacing = horizontalSpacing
         self.verticalSpacing = verticalSpacing
         self.alignment = alignment
+        self.itemAlignment = itemAlignment
     }
 
     public func sizeThatFits(
@@ -72,7 +87,17 @@ public struct FlowLayout: Layout {
         }
     }
 
-    private func layout(
+    /// Where each row of a laid-out flow begins, how wide it came out, and how tall its tallest
+    /// item is — everything the alignment pass needs to place the row's items along it.
+    private struct Rows {
+        var widths: [CGFloat] = []
+        var heights: [CGFloat] = []
+        var startIndices: [Int] = []
+    }
+
+    /// Internal rather than private so the geometry can be tested without fabricating SwiftUI's
+    /// `Subviews`, which is the only other way into it.
+    func layout(
         sizes: [CGSize],
         horizontalSpacing: CGFloat,
         verticalSpacing: CGFloat,
@@ -82,8 +107,7 @@ public struct FlowLayout: Layout {
         var currentX: CGFloat = 0
         var currentY: CGFloat = 0
         var lineHeight: CGFloat = 0
-        var rowWidths: [CGFloat] = []
-        var rowStartIndices: [Int] = []
+        var rows = Rows()
         var maxWidth: CGFloat = 0
 
         guard !sizes.isEmpty else {
@@ -93,8 +117,9 @@ public struct FlowLayout: Layout {
         // Step 1: Calculate initial positions and track row widths
         for (index, size) in sizes.enumerated() {
             if currentX + size.width > containerWidth && currentX > 0 {
-                rowWidths.append(currentX - horizontalSpacing)
-                rowStartIndices.append(index)
+                rows.widths.append(currentX - horizontalSpacing)
+                rows.heights.append(lineHeight)
+                rows.startIndices.append(index)
                 currentX = 0
                 currentY += lineHeight + verticalSpacing
                 lineHeight = 0
@@ -107,11 +132,26 @@ public struct FlowLayout: Layout {
         }
 
         // Final row
-        rowWidths.append(currentX - horizontalSpacing)
-        rowStartIndices.append(sizes.count)
+        rows.widths.append(currentX - horizontalSpacing)
+        rows.heights.append(lineHeight)
+        rows.startIndices.append(sizes.count)
 
-        // Step 2: Adjust x-coordinates based on alignment
-        for (rowIndex, rowWidth) in rowWidths.enumerated() {
+        align(offsets: &offsets, sizes: sizes, rows: rows, containerWidth: containerWidth)
+
+        let totalHeight = currentY + lineHeight
+        return (offsets, CGSize(width: containerWidth, height: totalHeight))
+    }
+
+    /// Places each row's items along it: horizontally by ``alignment``, and vertically by
+    /// ``itemAlignment`` within a row that is as tall as its tallest item — without which items of
+    /// mixed heights hang from a line rather than sitting on one.
+    private func align(
+        offsets: inout [CGPoint],
+        sizes: [CGSize],
+        rows: Rows,
+        containerWidth: CGFloat
+    ) {
+        for (rowIndex, rowWidth) in rows.widths.enumerated() {
             let offsetX: CGFloat
             switch alignment {
             case .leading:
@@ -122,14 +162,25 @@ public struct FlowLayout: Layout {
                 offsetX = containerWidth - rowWidth
             }
 
-            let startIndex = rowIndex == 0 ? 0 : rowStartIndices[rowIndex - 1]
-            let endIndex = rowStartIndices[rowIndex]
+            let rowHeight = rows.heights[rowIndex]
+            let startIndex = rowIndex == 0 ? 0 : rows.startIndices[rowIndex - 1]
+            let endIndex = rows.startIndices[rowIndex]
+
             for subviewIndex in startIndex ..< endIndex where subviewIndex < offsets.count {
                 offsets[subviewIndex].x += offsetX
+                offsets[subviewIndex].y += verticalOffset(inRowOf: rowHeight, for: sizes[subviewIndex].height)
             }
         }
+    }
 
-        let totalHeight = currentY + lineHeight
-        return (offsets, CGSize(width: containerWidth, height: totalHeight))
+    /// How far down its row an item of `height` sits.
+    private func verticalOffset(inRowOf rowHeight: CGFloat, for height: CGFloat) -> CGFloat {
+        let slack = rowHeight - height
+
+        return switch itemAlignment {
+        case .top: 0
+        case .center: slack / 2
+        case .bottom: slack
+        }
     }
 }
