@@ -29,7 +29,7 @@ extension Optional: AnyOptional {
 
 extension Optional where Wrapped == String {
     public var isEmptyOrNil: Bool {
-        self?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true
+        self?.trimmed.isEmpty ?? true
     }
 }
 

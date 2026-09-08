@@ -15,7 +15,7 @@ public struct RequiredValidator: Validator {
     }
 
     public func validate(_ input: String) throws(ValidationError) {
-        if input.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        if input.trimmed.isEmpty {
             throw .required("\(inputName) is required")
         }
     }
