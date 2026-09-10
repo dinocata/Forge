@@ -59,7 +59,7 @@ private enum Channel: String, Codable, CodableDefaultValue {
     case email
     case push
 
-    static let defaultCodableValue = Channel.email
+    static let defaultValue = Channel.email
 }
 
 private struct OptionalPreferences: Codable, Equatable {
@@ -110,7 +110,7 @@ private enum Kind: String, Codable, CodableDefaultValue {
     case barbell
     case dumbbell
 
-    static let defaultCodableValue = Kind.barbell
+    static let defaultValue = Kind.barbell
 }
 
 private struct Inventory: Codable, Equatable {

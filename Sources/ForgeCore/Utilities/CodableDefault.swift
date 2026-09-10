@@ -2,7 +2,7 @@
 
 /// A Codable value with a canonical fallback for a missing keyed value.
 public protocol CodableDefaultValue: Codable {
-    static var defaultCodableValue: Self { get }
+    static var defaultValue: Self { get }
 }
 
 /// Preserves synthesized `Codable` conformance while providing a fallback for a missing key.
@@ -11,7 +11,7 @@ public struct CodableDefault<Value: CodableDefaultValue>: Codable {
     public var wrappedValue: Value
 
     public init() {
-        wrappedValue = Value.defaultCodableValue
+        wrappedValue = Value.defaultValue
     }
 
     public init(wrappedValue: Value) {
@@ -122,37 +122,37 @@ public extension KeyedDecodingContainer {
 }
 
 extension Bool: CodableDefaultValue {
-    public static let defaultCodableValue = false
+    public static let defaultValue = false
 }
 
 extension Int: CodableDefaultValue {
-    public static let defaultCodableValue = 0
+    public static let defaultValue = 0
 }
 
 extension Double: CodableDefaultValue {
-    public static let defaultCodableValue = 0.0
+    public static let defaultValue = 0.0
 }
 
 extension Float: CodableDefaultValue {
-    public static let defaultCodableValue: Float = 0.0
+    public static let defaultValue: Float = 0.0
 }
 
 extension String: CodableDefaultValue {
-    public static let defaultCodableValue = ""
+    public static let defaultValue = ""
 }
 
 extension Array: CodableDefaultValue where Element: Codable {
-    public static var defaultCodableValue: [Element] { [] }
+    public static var defaultValue: [Element] { [] }
 }
 
 extension Set: CodableDefaultValue where Element: Codable {
-    public static var defaultCodableValue: Set<Element> { [] }
+    public static var defaultValue: Set<Element> { [] }
 }
 
 extension Dictionary: CodableDefaultValue where Key: Codable, Value: Codable {
-    public static var defaultCodableValue: [Key: Value] { [:] }
+    public static var defaultValue: [Key: Value] { [:] }
 }
 
 extension Optional: CodableDefaultValue where Wrapped: Codable {
-    public static var defaultCodableValue: Wrapped? { nil }
+    public static var defaultValue: Wrapped? { nil }
 }
