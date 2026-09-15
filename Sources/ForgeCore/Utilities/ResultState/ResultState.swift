@@ -99,7 +99,16 @@ extension ResultState: Equatable {
                let rhsEquatable = rhs as? any Equatable {
                 return lhsEquatable.isEqualTo(rhsEquatable)
             }
-            return true
+
+            // Void has no conformance but only one value, so every success of it is the same.
+            if lhs is Void, rhs is Void {
+                return true
+            }
+
+            // Anything else that cannot be compared is treated as different. `@Observable` skips
+            // notifying when a new value equals the old one, so answering `true` here left a view
+            // showing the previous success after a newer one was written.
+            return false
 
         case (.failure(let lhsError), .failure(let rhsError)):
             return lhsError.localizedDescription == rhsError.localizedDescription
