@@ -73,10 +73,14 @@ public extension Date {
     ///
     /// Dates outside that range return `nil` so callers can apply a
     /// context-specific fallback format.
+    ///
+    /// - Parameter formattingContext: Where the name sits in a sentence, which decides its
+    ///   capitalization: "Yesterday" to start one, "yesterday" in the middle of one.
     func formattedRelativeDay(
         relativeTo referenceDate: Date = .now,
         calendar: Calendar = .current,
-        locale: Locale = .current
+        locale: Locale = .current,
+        formattingContext: Formatter.Context = .beginningOfSentence
     ) -> String? {
         let startOfReferenceDay = calendar.startOfDay(for: referenceDate)
         let startOfDay = calendar.startOfDay(for: self)
@@ -90,7 +94,7 @@ public extension Date {
         formatter.locale = locale
         formatter.dateTimeStyle = .named
         formatter.unitsStyle = .full
-        formatter.formattingContext = .beginningOfSentence
+        formatter.formattingContext = formattingContext
         return formatter.localizedString(from: DateComponents(day: dayOffset))
     }
 }
