@@ -50,6 +50,7 @@ let package = Package(
             dependencies: [
                 "ForgeCore"
             ],
+            exclude: ["README.md"],
             swiftSettings: [
                 .enableUpcomingFeature("ApproachableConcurrency"),
             ]
