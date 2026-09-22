@@ -8,7 +8,6 @@ public protocol Target: Sendable {
     var bodyData: (any Encodable)? { get }
     var additionalHeaders: [String: String] { get }
     var isAuthenticationRequired: Bool { get }
-    var ignoredStatusCodes: Set<HttpStatusCode> { get }
 }
 
 public extension Target {
@@ -16,7 +15,6 @@ public extension Target {
     var bodyData: (any Encodable)? { nil }
     var additionalHeaders: [String: String] { [:] }
     var isAuthenticationRequired: Bool { false }
-    var ignoredStatusCodes: Set<HttpStatusCode> { [] }
 
     var requestDescription: String {
         var components = URLComponents()
