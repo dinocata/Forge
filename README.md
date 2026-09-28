@@ -36,7 +36,7 @@ Then add the products a target needs, such as `.product(name: "ForgeCore", packa
 - **Concurrency** — `asyncRetry` with exponential backoff; `TaskQueue`; `AsyncSequence` `collect()`, `eraseToStream()`, and `eraseToThrowingStream()`; `Sequence` `asyncMap`, `concurrentMap`, and `concurrentForEach`.
 - **Collections** — `IdentifiedArray`, an ordered collection of identifiable elements; `Sequence` conversions to sets, ordered sets, and identified arrays or dictionaries, and duplicate removal; `Collection.elementsBracketing` for sorted collections; `ArrayBuilder`.
 - **Coding** — the `.iso8601withOptionalFractionalSeconds` date-decoding strategy; conversion between Codable values and JSON-compatible dictionaries; `AnyEncodable`; `CodableDefault` for keys that may be missing; `OptionalValue`; `CSVWriter`.
-- **State** — `ResultState` and the observable `AsyncState` for loading, success, and failure; `PaginationStore` and `PaginationResponse` for cursor-based pagination.
+- **State** — `ResultState` and the observable `AsyncState` for loading, success, and failure; `OptimisticSelection` for serially synchronized set membership; `PaginationStore` and `PaginationResponse` for cursor-based pagination.
 - **Validation** — the `Validator` and `AsyncValidator` protocols, built-in validators (required, length, display name, URL, and more), and `FormFieldState` with a text-field validation modifier.
 - **Dates** — `DateProvider` for an injectable current date; `Date` helpers for day boundaries, relative day names, and age; `Calendar` component comparisons.
 - **Logging** — the `ForgeLogger` protocol and `LogLevel`.

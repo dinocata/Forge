@@ -61,6 +61,7 @@ public actor TaskQueue<Value: Sendable> {
     /// waits for the queue to empty before throwing the first failure in FIFO order. Results from
     /// operations completed earlier in the same drain are included. Cancelling a waiter does not
     /// cancel queue operations, and calling this on an empty queue returns immediately.
+    @discardableResult
     public func waitForAll() async throws -> [Value] {
         guard hasActiveTasks else {
             return []
