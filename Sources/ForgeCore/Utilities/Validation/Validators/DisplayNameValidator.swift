@@ -12,7 +12,7 @@ public struct DisplayNameValidator: Validator {
     @ArrayBuilder<Validator>
     private func validators(_ inputName: String) -> [Validator] {
         RequiredValidator(inputName: inputName)
-        NoSpecialCharactersValidator(inputName: inputName, allowSpaces: true)
+        NoSpecialCharactersValidator(inputName: inputName, allowing: [.space, .hyphen, .underscore])
         MaxLengthValidator(inputName: inputName, maxLength: 30)
     }
 
