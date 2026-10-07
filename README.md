@@ -39,7 +39,7 @@ Then add the products a target needs, such as `.product(name: "ForgeCore", packa
 - **State** — `ResultState` and the observable `AsyncState` for loading, success, and failure; `OptimisticSelection` for serially synchronized set membership; `PaginationStore` and `PaginationResponse` for cursor-based pagination.
 - **Validation** — the `Validator` and `AsyncValidator` protocols, built-in validators (required, length, display name, URL, and more), and `FormFieldState` with a text-field validation modifier.
 - **Dates** — `DateProvider` for an injectable current date; `Date` helpers for day boundaries, relative day names, and age; `Calendar` component comparisons.
-- **Logging** — the `ForgeLogger` protocol and `LogLevel`.
+- **Logging** — the `ForgeLogger` protocol, `LogLevel`, and `CompositeLogger` for sending to several loggers at once.
 - **Runtime host** — `RuntimeHost.current`: whether the app, a test run, or SwiftUI previews launched the process.
 - **Small helpers** — `Optional` (`isSome`, `isNone`, `forceUnwrap`, `isEmptyOrNil`), `Equatable` (`isOneOf`, `isEqualTo`), `String.trimmed`, and `Bundle` app name and version.
 
