@@ -56,7 +56,7 @@ Then add the products a target needs, such as `.product(name: "ForgeCore", packa
 ### ForgeUI
 
 - **Navigation** — `Router`, `RouterView`, and `DestinationType` for stack navigation driven by destination values.
-- **Components** — `FlowLayout`, `InfiniteCarousel`, and `ShareSheet`.
+- **Components** — `FlowLayout`, `EqualWidthHStack`, `InfiniteCarousel`, and `ShareSheet`.
 - **View modifiers** — `adaptiveSheet`, `asButton`, `pulsing`, `stretchy`, and `revealsFocusedField`.
 - **Storage** — `CodableAppStorage` for Codable values in app storage.
 - **Small helpers** — move-offset transitions, CSS-angle `LinearGradient`, uniform `EdgeInsets`, and per-element `Binding`s.
