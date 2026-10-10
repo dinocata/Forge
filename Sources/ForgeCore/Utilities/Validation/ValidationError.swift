@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum ValidationError: LocalizedError, Equatable, Sendable {
+public enum ValidationError: UserFacingError, Equatable, Sendable {
     case generic(_ message: String? = nil)
     case required(_ message: String? = nil)
     case tooShort(_ message: String? = nil)
