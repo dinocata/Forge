@@ -58,7 +58,7 @@ Then add the products a target needs, such as `.product(name: "ForgeCore", packa
 
 - **Navigation** — `Router`, `RouterView`, and `DestinationType` for stack navigation driven by destination values.
 - **Components** — `FlowLayout`, `EqualWidthHStack`, `InfiniteCarousel`, and `ShareSheet`.
-- **View modifiers** — `adaptiveSheet`, `asButton`, `pulsing`, `reservingSpace`, `stretchy`, and `revealsFocusedField`.
+- **View modifiers** — `asButton`, `pulsing`, `reservingSpace`, `stretchy`, and `revealsFocusedField`.
 - **Storage** — `CodableAppStorage` for Codable values in app storage.
 - **Small helpers** — move-offset transitions, CSS-angle `LinearGradient`, uniform `EdgeInsets`, and per-element `Binding`s.
 
