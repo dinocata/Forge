@@ -3,6 +3,7 @@
 import ForgeCore
 import Testing
 
+@MainActor
 struct TaskQueueTests {
 
     private enum TestError: Error {
@@ -22,7 +23,7 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 await releaseFirst.wait()
                 return 1
-            }
+            }.value
         }
 
         await firstStarted.wait()
@@ -31,7 +32,7 @@ struct TaskQueueTests {
             try await queue.enqueue {
                 await order.append(2)
                 return 2
-            }
+            }.value
         }
 
         await releaseFirst.send()
@@ -39,7 +40,7 @@ struct TaskQueueTests {
         #expect(try await first.value == 1)
         #expect(try await second.value == 2)
         #expect(await order.values == [1, 2])
-        #expect(await queue.hasActiveTasks == false)
+        #expect(queue.hasActiveTasks == false)
     }
 
     @Test(.timeLimit(.minutes(1)))
@@ -53,11 +54,11 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 await releaseFirst.wait()
                 throw TestError.expected
-            }
+            }.value
         }
 
         await firstStarted.wait()
-        let succeeding = Task { try await queue.enqueue { 2 } }
+        let succeeding = Task { try await queue.enqueue { 2 }.value }
         await releaseFirst.send()
 
         do {
@@ -82,11 +83,11 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 try await Task.sleep(for: .seconds(60))
                 return 1
-            }
+            }.value
         }
 
         await firstStarted.wait()
-        let succeeding = Task { try await queue.enqueue { 2 } }
+        let succeeding = Task { try await queue.enqueue { 2 }.value }
         cancelled.cancel()
 
         await expectCancellation(from: cancelled)
@@ -103,19 +104,19 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 try await Task.sleep(for: .seconds(60))
                 return 1
-            }
+            }.value
         }
 
         await firstStarted.wait()
-        let pending = Task { try await queue.enqueue { 2 } }
+        let pending = Task { try await queue.enqueue { 2 }.value }
 
         // Give the pending caller a turn to enter the queue behind the parked operation.
         await Task.yield()
-        await queue.cancelAll()
+        queue.cancelAll()
 
         await expectCancellation(from: active)
         await expectCancellation(from: pending)
-        #expect(await queue.hasActiveTasks == false)
+        #expect(queue.hasActiveTasks == false)
     }
 
     @Test(.timeLimit(.minutes(1)))
@@ -129,14 +130,14 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 await releaseFirst.wait()
                 return 1
-            }
+            }.value
         }
 
         await firstStarted.wait()
         let waiting = Task { try await queue.waitForAll() }
         await Task.yield()
 
-        let second = Task { try await queue.enqueue { 2 } }
+        let second = Task { try await queue.enqueue { 2 }.value }
         await Task.yield()
         await releaseFirst.send()
 
@@ -157,7 +158,7 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 await releaseFirst.wait()
                 throw TestError.expected
-            }
+            }.value
         }
 
         await firstStarted.wait()
@@ -165,7 +166,7 @@ struct TaskQueueTests {
             try await queue.enqueue {
                 await laterFinished.send()
                 return 2
-            }
+            }.value
         }
         let waiting = Task { try await queue.waitForAll() }
         await releaseFirst.send()
@@ -190,7 +191,7 @@ struct TaskQueueTests {
         let value = try await queue.enqueue { @MainActor in
             MainActor.preconditionIsolated()
             return 1
-        }
+        }.value
 
         #expect(value == 1)
     }
@@ -213,7 +214,7 @@ struct TaskQueueTests {
                 await started.send()
                 await release.wait()
                 return 1
-            }
+            }.value
         }
 
         await started.wait()
@@ -238,7 +239,7 @@ struct TaskQueueTests {
                 await started.send()
                 await release.wait()
                 return 1
-            }
+            }.value
         }
 
         await started.wait()
@@ -262,7 +263,7 @@ struct TaskQueueTests {
                 await firstStarted.send()
                 await releaseFirst.wait()
                 return 1
-            }
+            }.value
         }
 
         await firstStarted.wait()
@@ -279,7 +280,7 @@ struct TaskQueueTests {
                 await secondStarted.send()
                 await releaseSecond.wait()
                 return 2
-            }
+            }.value
         }
 
         await secondStarted.wait()
@@ -300,16 +301,134 @@ struct TaskQueueTests {
                 await started.send()
                 try await Task.sleep(for: .seconds(60))
                 return 1
-            }
+            }.value
         }
 
         await started.wait()
         let waiter = Task { try await queue.waitForAll() }
         await Task.yield()
-        await queue.cancelAll()
+        queue.cancelAll()
 
         await expectCancellation(from: waiter)
         await expectCancellation(from: operation)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func operationsEnqueuedFromSynchronousCodeRunInCallOrder() async throws {
+        let queue = TaskQueue<Int>()
+        let order = Recorder<Int>()
+        let count = 50
+
+        for index in 0..<count {
+            queue.enqueue {
+                await order.append(index)
+                return index
+            }
+        }
+
+        #expect(try await queue.waitForAll() == Array(0..<count))
+        #expect(await order.values == Array(0..<count))
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func cancellingAWaitingOperationFinishesItWithoutWaitingForTheActiveOne() async throws {
+        let queue = TaskQueue<Int>()
+        let firstStarted = Signal()
+        let releaseFirst = Signal()
+
+        let first = queue.enqueue {
+            await firstStarted.send()
+            await releaseFirst.wait()
+            return 1
+        }
+        await firstStarted.wait()
+
+        let waiting = queue.enqueue { 2 }
+        waiting.cancel()
+
+        do {
+            _ = try await waiting.value
+            Issue.record("Expected cancellation.")
+        } catch is CancellationError {
+            // Expected, while the first operation is still running.
+        }
+
+        await releaseFirst.send()
+        #expect(try await first.value == 1)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func aCancelledWaitingOperationDoesNotLetTheNextOneOvertakeTheActiveOne() async throws {
+        let queue = TaskQueue<Int>()
+        let firstStarted = Signal()
+        let releaseFirst = Signal()
+        let order = Recorder<Int>()
+
+        let first = queue.enqueue {
+            await firstStarted.send()
+            await releaseFirst.wait()
+            await order.append(1)
+            return 1
+        }
+        await firstStarted.wait()
+
+        queue.enqueue { 2 }.cancel()
+        let third = queue.enqueue {
+            await order.append(3)
+            return 3
+        }
+
+        await releaseFirst.send()
+        #expect(try await first.value == 1)
+        #expect(try await third.value == 3)
+        #expect(await order.values == [1, 3])
+    }
+}
+
+struct SharedTaskQueueTests {
+
+    @Test(.timeLimit(.minutes(1)))
+    func callersOnDifferentActorsShareOneQueue() async throws {
+        let queue = SharedTaskQueue<Int>()
+        let order = Recorder<Int>()
+
+        let mainActorValue = try await Task { @MainActor in
+            try await queue.enqueue {
+                await order.append(1)
+                return 1
+            }
+        }
+        .value
+        let otherActorValue = try await Recorder<Int>().enqueue(on: queue) {
+            await order.append(2)
+            return 2
+        }
+
+        #expect(mainActorValue == 1)
+        #expect(otherActorValue == 2)
+        #expect(await order.values == [1, 2])
+        #expect(try await queue.waitForAll() == [])
+        #expect(await queue.hasActiveTasks == false)
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func cancellingACallerCancelsItsOperation() async throws {
+        let queue = SharedTaskQueue<Int>()
+        let started = Signal()
+
+        let cancelled = Task {
+            try await queue.enqueue {
+                await started.send()
+                try await Task.sleep(for: .seconds(60))
+                return 1
+            }
+        }
+
+        await started.wait()
+        cancelled.cancel()
+
+        await expectCancellation(from: cancelled)
+        #expect(try await queue.enqueue { 2 } == 2)
     }
 }
 
@@ -339,6 +458,14 @@ private actor Recorder<Value: Sendable> {
 
     func append(_ value: Value) {
         values.append(value)
+    }
+
+    /// Enqueues from this actor, as a caller on another actor than the test would.
+    func enqueue(
+        on queue: SharedTaskQueue<Int>,
+        _ operation: @escaping @Sendable () async throws -> Int
+    ) async throws -> Int {
+        try await queue.enqueue(operation)
     }
 }
 

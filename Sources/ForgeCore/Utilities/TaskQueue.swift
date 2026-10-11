@@ -6,53 +6,64 @@
 //
 
 import Foundation
-import OrderedCollections
+import Synchronization
 
-/// Runs asynchronous operations serially in first-in, first-out order.
+/// Runs asynchronous operations serially, in the order ``enqueue(isolation:_:)`` is called.
 ///
-/// Each call to ``enqueue(_:)`` waits only for its own operation and receives that operation's
-/// value or error. A failure does not stop later operations; call ``cancelAll()`` when it should.
-public actor TaskQueue<Value: Sendable> {
+/// Not `Sendable`: a queue lives on its owner's actor, and enqueuing is a synchronous call there, so
+/// each operation's place in line is fixed at the call, even from synchronous code. To share one
+/// queue across actors, use ``SharedTaskQueue``.
+///
+/// A failure does not stop later operations; call ``cancelAll()`` when it should.
+public final class TaskQueue<Value: Sendable> {
     /// Whether an operation is running or waiting to run.
     public var hasActiveTasks: Bool {
-        activeTask != nil || !tasks.isEmpty
+        !operations.isEmpty
     }
 
-    private var tasks: IdentifiedArrayOf<TaskEntry<Value>> = []
-    private var activeTask: ActiveTask?
+    /// Each unfinished operation by its place in line.
+    private var operations: [Int: Task<Value, Error>] = [:]
+    /// Finishes once the last enqueued operation has, which the next one waits for.
+    private var tail: Task<Void, Never>?
     private var nextSequence = 0
     private var drainResults: [Int: Result<Value, Error>] = [:]
-    private var drainWaiters: IdentifiedArrayOf<DrainWaiter<Value>> = []
+    private var drainWaiters: [OneShot<[Value]>] = []
 
     public init() {}
 
-    /// Enqueues an operation and returns that operation's value when its turn finishes.
+    /// Enqueues `operation` behind every operation enqueued before it, and returns at once.
     ///
-    /// Cancelling the caller cancels this operation without affecting the others in the queue.
-    /// Annotate the closure with a global actor when its work requires one, such as
-    /// `queue.enqueue { @MainActor in ... }` for UI work.
+    /// The operation runs on no actor of its own. Annotate it with a global actor when its work
+    /// requires one, such as `queue.enqueue { @MainActor in ... }` for UI work.
+    @discardableResult
     public func enqueue(
-        _ operation: @Sendable @escaping () async throws -> Value
-    ) async throws -> Value {
-        let taskID = UUID()
+        isolation: isolated (any Actor)? = #isolation,
+        _ operation: @escaping @Sendable () async throws -> Value
+    ) -> QueuedOperation<Value> {
         let sequence = nextSequence
         nextSequence += 1
 
-        return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                tasks.append(
-                    TaskEntry(
-                        id: taskID,
-                        sequence: sequence,
-                        operation: operation,
-                        complete: { continuation.resume(with: $0) }
-                    )
-                )
-                startNextTaskIfNeeded()
-            }
-        } onCancel: {
-            Task { await self.cancel(taskID) }
+        let previous = tail
+        let task = Task<Value, Error> {
+            try await waitForTurn(after: previous)
+            let value = try await operation()
+            try Task.checkCancellation()
+            return value
         }
+        tail = Task {
+            await previous?.value
+            _ = await task.result
+        }
+        operations[sequence] = task
+
+        let completion = Task<Value, Error> {
+            _ = isolation
+            let result = await task.result
+            self.finish(sequence, with: result)
+            return try result.get()
+        }
+
+        return QueuedOperation(task: task, completion: completion)
     }
 
     /// Waits until the queue first becomes empty and returns every value produced in FIFO order.
@@ -62,100 +73,42 @@ public actor TaskQueue<Value: Sendable> {
     /// operations completed earlier in the same drain are included. Cancelling a waiter does not
     /// cancel queue operations, and calling this on an empty queue returns immediately.
     @discardableResult
-    public func waitForAll() async throws -> [Value] {
+    public func waitForAll(isolation: isolated (any Actor)? = #isolation) async throws -> [Value] {
         guard hasActiveTasks else {
             return []
         }
 
-        let waiterID = UUID()
+        let waiter = OneShot<[Value]>()
+        drainWaiters.append(waiter)
+
         return try await withTaskCancellationHandler {
-            try await withCheckedThrowingContinuation { continuation in
-                drainWaiters.append(DrainWaiter(id: waiterID, continuation: continuation))
-            }
+            try await waiter.wait()
         } onCancel: {
-            Task { await self.cancelWaiter(waiterID) }
+            waiter.resolve(with: .failure(CancellationError()))
         }
     }
 
     /// Cancels the active operation and every operation still waiting to run.
     ///
-    /// Pending callers resume immediately. The active operation resumes after it cooperates with
-    /// cancellation by reaching a cancellation-aware suspension point or returning.
+    /// Waiting operations finish with `CancellationError` at once. The active one finishes when it
+    /// cooperates with cancellation by reaching a cancellation-aware suspension point or returning.
     public func cancelAll() {
-        let pendingTasks = tasks
-        tasks.removeAll()
-
-        for task in pendingTasks {
-            complete(task, with: .failure(CancellationError()))
-        }
-
-        activeTask?.task.cancel()
-        completeDrainIfNeeded()
+        operations.values.forEach { $0.cancel() }
     }
 
-    private func cancel(_ taskID: UUID) {
-        if activeTask?.id == taskID {
-            activeTask?.task.cancel()
-        } else if let task = tasks.remove(id: taskID) {
-            complete(task, with: .failure(CancellationError()))
-            completeDrainIfNeeded()
-        }
-    }
+    private func finish(_ sequence: Int, with result: Result<Value, Error>) {
+        operations[sequence] = nil
+        drainResults[sequence] = result
 
-    private func cancelWaiter(_ waiterID: UUID) {
-        drainWaiters.remove(id: waiterID)?.continuation.resume(throwing: CancellationError())
-    }
-
-    private func startNextTaskIfNeeded() {
-        guard activeTask == nil, let task = tasks.first else {
+        guard !hasActiveTasks else {
             return
         }
 
-        tasks.remove(id: task.id)
-        let runningTask = Task { [self] in
-            let result: Result<Value, Error>
-
-            do {
-                try Task.checkCancellation()
-                let value = try await task.operation()
-                try Task.checkCancellation()
-                result = .success(value)
-            } catch let operationError {
-                result = .failure(Task.isCancelled ? CancellationError() : operationError)
-            }
-
-            finishTask(task, with: result)
-        }
-        activeTask = ActiveTask(id: task.id, task: runningTask)
-    }
-
-    private func finishTask(_ task: TaskEntry<Value>, with result: Result<Value, Error>) {
-        guard activeTask?.id == task.id else {
-            return
-        }
-
-        complete(task, with: result)
-        activeTask = nil
-        startNextTaskIfNeeded()
-        completeDrainIfNeeded()
-    }
-
-    private func complete(_ task: TaskEntry<Value>, with result: Result<Value, Error>) {
-        drainResults[task.sequence] = result
-        task.complete(result)
-    }
-
-    private func completeDrainIfNeeded() {
-        guard hasActiveTasks == false else {
-            return
-        }
-
-        let result = drainResult()
+        let drainResult = drainResult()
         let waiters = drainWaiters
         drainWaiters.removeAll()
         drainResults.removeAll()
-        nextSequence = 0
-        waiters.forEach { $0.continuation.resume(with: result) }
+        waiters.forEach { $0.resolve(with: drainResult) }
     }
 
     private func drainResult() -> Result<[Value], Error> {
@@ -174,19 +127,86 @@ public actor TaskQueue<Value: Sendable> {
     }
 }
 
-private struct ActiveTask {
-    let id: UUID
-    let task: Task<Void, Never>
+/// Waits for `previous` to finish, or throws as soon as the caller is cancelled, so a cancelled
+/// operation never waits out the ones ahead of it.
+private func waitForTurn(after previous: Task<Void, Never>?) async throws {
+    if let previous {
+        let turn = OneShot<Void>()
+        Task {
+            await previous.value
+            turn.resolve(with: .success(()))
+        }
+
+        try await withTaskCancellationHandler {
+            try await turn.wait()
+        } onCancel: {
+            turn.resolve(with: .failure(CancellationError()))
+        }
+    }
+
+    try Task.checkCancellation()
 }
 
-private struct TaskEntry<Value: Sendable>: Identifiable, Sendable {
-    let id: UUID
-    let sequence: Int
-    let operation: @Sendable () async throws -> Value
-    let complete: @Sendable (Result<Value, Error>) -> Void
+/// One operation enqueued on a ``TaskQueue``.
+public struct QueuedOperation<Value: Sendable>: Sendable {
+    fileprivate let task: Task<Value, Error>
+    fileprivate let completion: Task<Value, Error>
+
+    /// The operation's value once it has run. Cancelling the task awaiting it cancels the operation
+    /// without affecting the others in the queue.
+    public var value: Value {
+        get async throws {
+            try await withTaskCancellationHandler {
+                try await completion.value
+            } onCancel: {
+                task.cancel()
+            }
+        }
+    }
+
+    /// Cancels the operation without affecting the others in the queue.
+    public func cancel() {
+        task.cancel()
+    }
 }
 
-private struct DrainWaiter<Value: Sendable>: Identifiable {
-    let id: UUID
-    let continuation: CheckedContinuation<[Value], Error>
+/// A result delivered once to one waiter, whichever of the two comes first.
+private final class OneShot<Success: Sendable>: Sendable {
+    private enum State {
+        case waiting(CheckedContinuation<Success, Error>?)
+        case resolved(Result<Success, Error>)
+    }
+
+    private let state = Mutex(State.waiting(nil))
+
+    func wait() async throws -> Success {
+        try await withCheckedThrowingContinuation { continuation in
+            let resolved: Result<Success, Error>? = state.withLock { state in
+                guard case .resolved(let result) = state else {
+                    state = .waiting(continuation)
+                    return nil
+                }
+
+                return result
+            }
+
+            if let resolved {
+                continuation.resume(with: resolved)
+            }
+        }
+    }
+
+    /// Delivers `result`, unless one was delivered already.
+    func resolve(with result: Result<Success, Error>) {
+        let continuation: CheckedContinuation<Success, Error>?? = state.withLock { state in
+            guard case .waiting(let continuation) = state else {
+                return nil
+            }
+
+            state = .resolved(result)
+            return .some(continuation)
+        }
+
+        continuation??.resume(with: result)
+    }
 }

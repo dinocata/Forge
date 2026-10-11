@@ -76,7 +76,7 @@ public final class OptimisticSelection<Element: Hashable & Sendable> {
         self.values = values
         synchronizedValues = values
 
-        await operationQueue.cancelAll()
+        operationQueue.cancelAll()
 
         do {
             try await operationQueue.waitForAll()
@@ -115,6 +115,7 @@ public final class OptimisticSelection<Element: Hashable & Sendable> {
                     synchronizedValues.remove(element)
                 }
             }
+            .value
         } catch is CancellationError where authoritativeStateID != operationAuthoritativeStateID {
             // An authoritative replacement deliberately superseded this operation.
             return
@@ -128,7 +129,7 @@ public final class OptimisticSelection<Element: Hashable & Sendable> {
 
     private func synchronizeIfQueueIsEmpty(changeID: UUID) async {
         guard latestChangeID == changeID,
-              await operationQueue.hasActiveTasks == false else {
+              operationQueue.hasActiveTasks == false else {
             return
         }
 
