@@ -1,4 +1,5 @@
 import ForgeCore
+import Foundation
 import Testing
 
 struct AppVersionTests {
@@ -22,5 +23,22 @@ struct AppVersionTests {
 
     @Test func describesAllThreeNumbers() {
         #expect(AppVersion("1.2")?.description == "1.2.0")
+    }
+
+    @Test func decodesFromItsStringForm() throws {
+        let versions = try JSONDecoder().decode([AppVersion].self, from: Data(#"["1.2", "1.2.3"]"#.utf8))
+        #expect(versions == [AppVersion(major: 1, minor: 2), AppVersion(major: 1, minor: 2, patch: 3)])
+    }
+
+    @Test func encodesAsItsStringFormAndDecodesBack() throws {
+        let version = AppVersion(major: 1, minor: 2, patch: 3)
+        let data = try JSONEncoder().encode([version])
+        #expect(String(decoding: data, as: UTF8.self) == #"["1.2.3"]"#)
+        #expect(try JSONDecoder().decode([AppVersion].self, from: data) == [version])
+    }
+
+    @Test(arguments: [#"["1.0-beta"]"#, #"[""]"#, "[1]"])
+    func failsToDecodeAMalformedVersion(_ json: String) {
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode([AppVersion].self, from: Data(json.utf8)) }
     }
 }
