@@ -11,6 +11,7 @@ import os
 
 public extension UserDefaults {
 
+    /// Returns the fallback on decode failure, preserving stored data for recovery.
     func getCodable<Value: Codable & Equatable>(
         _ key: String,
         defaultValue: Value? = nil,
@@ -34,7 +35,6 @@ public extension UserDefaults {
                 String(describing: Value.self),
                 String(describing: error)
             )
-            removeObject(forKey: key)
             return defaultValue
         }
     }

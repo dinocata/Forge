@@ -28,6 +28,47 @@ struct UserDefaultsCodableTests {
         #expect(restored == .fixture)
     }
 
+    @Test(arguments: ["invalid JSON", "{}"])
+    func decodeFailurePreservesStoredDataAndReturnsFallback(_ json: String) throws {
+        let fixture = try makeUserDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let data = Data(json.utf8)
+        fixture.defaults.set(data, forKey: "datedValue")
+
+        let restored: DatedValue? = fixture.defaults.getCodable("datedValue", defaultValue: .fixture)
+
+        #expect(restored == .fixture)
+        #expect(fixture.defaults.data(forKey: "datedValue") == data)
+    }
+
+    @Test(arguments: ["invalid JSON", "{}"])
+    func decodeFailurePreservesStoredDataWithoutFallback(_ json: String) throws {
+        let fixture = try makeUserDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let data = Data(json.utf8)
+        fixture.defaults.set(data, forKey: "datedValue")
+
+        let restored: DatedValue? = fixture.defaults.getCodable("datedValue")
+
+        #expect(restored == nil)
+        #expect(fixture.defaults.data(forKey: "datedValue") == data)
+    }
+
+    @Test func incompatibleValueRemainsReadableWithMatchingType() throws {
+        let fixture = try makeUserDefaults()
+        defer { fixture.defaults.removePersistentDomain(forName: fixture.suiteName) }
+        let original = "recoverable value"
+        let data = try JSONEncoder().encode(original)
+        fixture.defaults.set(data, forKey: "value")
+
+        let incompatible: DatedValue? = fixture.defaults.getCodable("value")
+        let recovered: String? = fixture.defaults.getCodable("value")
+
+        #expect(incompatible == nil)
+        #expect(recovered == original)
+        #expect(fixture.defaults.data(forKey: "value") == data)
+    }
+
     private func makeUserDefaults() throws -> (defaults: UserDefaults, suiteName: String) {
         let suiteName = "UserDefaultsCodableTests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suiteName))
