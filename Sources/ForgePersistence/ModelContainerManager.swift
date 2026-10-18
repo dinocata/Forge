@@ -18,20 +18,26 @@ public protocol ModelContainerManagerProtocol: Sendable {
 
 public final class ModelContainerManager: @unchecked Sendable, ModelContainerManagerProtocol {
 
+    private let schema: Schema
     private let models: [any PersistentModel.Type]
+    private let migrationPlan: (any SchemaMigrationPlan.Type)?
     private let isStoredInMemoryOnly: Bool
     private let logger: ForgeLogger?
     private var _modelContainer: ModelContainer?
     private let lock: NSLock = .init()
     private let resetStoreOnContainerFailure: Bool
 
+    /// Creates a container for a versioned schema, optionally migrating it through the supplied plan.
     public init(
-        models: [any PersistentModel.Type],
+        schema: any VersionedSchema.Type,
+        migrationPlan: (any SchemaMigrationPlan.Type)? = nil,
         isStoredInMemoryOnly: Bool = false,
         logger: ForgeLogger? = nil,
         resetStoreOnContainerFailure: Bool = false
     ) {
-        self.models = models
+        self.schema = Schema(versionedSchema: schema)
+        self.models = schema.models
+        self.migrationPlan = migrationPlan
         self.logger = logger
         self.isStoredInMemoryOnly = isStoredInMemoryOnly
         self.resetStoreOnContainerFailure = resetStoreOnContainerFailure
@@ -85,11 +91,10 @@ public final class ModelContainerManager: @unchecked Sendable, ModelContainerMan
     }
 
     private func makeContainer(isStoredInMemoryOnly: Bool) throws -> ModelContainer {
-        let schema = Schema(models)
         let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isStoredInMemoryOnly)
 
         do {
-            return try ModelContainer(for: schema, configurations: [configuration])
+            return try ModelContainer(for: schema, migrationPlan: migrationPlan, configurations: [configuration])
         } catch {
             logger?.capture(
                 error: ModelContainerError.configurationFailed(error),
@@ -101,7 +106,7 @@ public final class ModelContainerManager: @unchecked Sendable, ModelContainerMan
 
             if resetStoreOnContainerFailure {
                 try? FileManager.default.removeItem(at: configuration.url)
-                return try ModelContainer(for: schema, configurations: [configuration])
+                return try ModelContainer(for: schema, migrationPlan: migrationPlan, configurations: [configuration])
             } else {
                 fatalError(error.localizedDescription)
             }
